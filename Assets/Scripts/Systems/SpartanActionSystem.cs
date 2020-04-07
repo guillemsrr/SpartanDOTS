@@ -4,10 +4,13 @@ using UnityEngine;
 using Unity.Entities;
 using Unity.Jobs;
 
-public class SpartanActionSystem : JobComponentSystem
+namespace Core
 {
-    protected override JobHandle OnUpdate(JobHandle inputDeps)
+    public class SpartanActionSystem : JobComponentSystem
     {
-        return inputDeps;
+        protected override JobHandle OnUpdate(JobHandle inputDeps)
+        {
+            return inputDeps;
+        }
     }
 }

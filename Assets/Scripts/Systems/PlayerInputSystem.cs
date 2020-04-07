@@ -3,17 +3,20 @@ using Unity.Jobs;
 using UnityEngine;
 using Unity.Mathematics;
 
-[AlwaysSynchronizeSystem]
-public class PlayerInputSystem : JobComponentSystem
+namespace Core
 {
-    protected override JobHandle OnUpdate(JobHandle inputDeps)
+    public class PlayerInputSystem : ComponentSystem
     {
-        Entities.ForEach((ref SpartanActionsData action, ref MovementData movement) =>
+        protected override void OnUpdate()
         {
-            float3 direction = new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"));
-            movement.direction = direction;
-
-        }).Run();
-        return default;
+            float3 direction = Camera.main.transform.forward;
+            Entities.ForEach((ref SpartanActionsData action, ref AgentData agent) =>
+            {
+                float3 moveInput = new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"));
+                direction = moveInput;//TransformDirection(direction);
+                direction.y = 0;
+                agent.direction = direction;
+            });
+        }
     }
 }

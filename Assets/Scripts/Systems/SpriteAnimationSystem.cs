@@ -6,36 +6,38 @@ using Unity.Jobs;
 using Unity.Transforms;
 using Unity.Mathematics;
 
-[AlwaysSynchronizeSystem]
-public class SpriteAnimationSystem : JobComponentSystem
+namespace Core
 {
-    protected override JobHandle OnUpdate(JobHandle inputDeps)
-    {
-		float deltaTime = Time.DeltaTime;
-
-		Entities.ForEach((ref SpriteAnimationData spriteAnimationData, ref Translation translation) =>
+	[DisableAutoCreation]
+	//[AlwaysSynchronizeSystem]
+	public class SpriteAnimationSystem : ComponentSystem
+	{
+		protected override void OnUpdate()
 		{
-			spriteAnimationData.frameTimer += deltaTime;
-			while (spriteAnimationData.frameTimer >= spriteAnimationData.frameTimerMax)
+			float deltaTime = Time.DeltaTime;
+
+			Entities.ForEach((ref SpriteAnimationData spriteAnimationData, ref Translation translation, ref Rotation rotation) =>
 			{
-				spriteAnimationData.frameTimer -= spriteAnimationData.frameTimerMax;
-				spriteAnimationData.currentFrame = (spriteAnimationData.currentFrame + 1) % spriteAnimationData.frameCount;
-				if(spriteAnimationData.currentFrame > spriteAnimationData.maxFrame - 1)
+				spriteAnimationData.frameTimer += deltaTime;
+				while (spriteAnimationData.frameTimer >= spriteAnimationData.frameTimerMax)
 				{
-					spriteAnimationData.currentFrame = 0;
+					spriteAnimationData.frameTimer -= spriteAnimationData.frameTimerMax;
+
+					SpriteSheetInfo.SpriteSheetAnimation animation = GameManager.Instance.SpriteSheetInfo.GetSpriteSheetAnimation(spriteAnimationData.animation, spriteAnimationData.direction);
+					spriteAnimationData.currentCell.x++;
+					if (spriteAnimationData.currentCell.x > animation.endCell.x)
+					{
+						spriteAnimationData.currentCell.x = animation.startCell.x;
+					}
+
+					float uvWidth = 1f / 8f;
+					float uvHeight = 1f / 8f;
+
+					spriteAnimationData.uv = new Vector4(uvWidth, uvHeight, spriteAnimationData.currentCell.x * uvWidth, (7 - spriteAnimationData.currentCell.y) * uvHeight);
+					spriteAnimationData.matrix = Matrix4x4.TRS(translation.Value, rotation.Value, Vector3.one);
 				}
-				float uvWidth = 1f / spriteAnimationData.frameCount;
-				float uvHeight = 1f/8f;
-				float uvOffsetX = uvWidth * spriteAnimationData.currentFrame;
-				float uvOffsetY = 1/8f * 7f; ;
-				spriteAnimationData.uv = new Vector4(uvWidth, uvHeight, uvOffsetX, uvOffsetY);
 
-				float3 position = translation.Value;
-				position.z = position.y * .01f;
-				spriteAnimationData.matrix = Matrix4x4.TRS(translation.Value, Quaternion.identity, Vector3.one);
-			}
-
-		}).Run();
-		return default;
+			});
+		}
 	}
 }
