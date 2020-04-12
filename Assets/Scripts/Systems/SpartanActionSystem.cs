@@ -4,7 +4,7 @@ using UnityEngine;
 using Unity.Entities;
 using Unity.Jobs;
 
-namespace Core
+namespace Spartans
 {
     public class SpartanActionSystem : JobComponentSystem
     {

@@ -6,15 +6,14 @@ using Unity.Jobs;
 using Unity.Transforms;
 using Unity.Mathematics;
 
-namespace Core
+namespace Spartans
 {
+    [UpdateAfter(typeof(PlayerInputSystem))]//maybe it's unnecessary or i should find another way. It's not in OnUpdate()
+    //[UpdateAfter(typeof(FormationSystem))]//potential bottleneck
     public class SteeringBehaviorsSystem : SystemBase
     {
         EntityQuery _query;
-        const float K_SEPARATION_FORCE = 5f;
-        const float K_COHESION_FORCE = 1.6f;
-        const float K_ALIGNMENT_FORCE = 1f;
-
+        List<AgentSettings> _settings = new List<AgentSettings>();
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -23,48 +22,42 @@ namespace Core
                     typeof(Translation),
                     ComponentType.ReadOnly<AgentData>()
                 );
+
+            _settings = new List<AgentSettings>();
         }
         protected override void OnUpdate()
         {
             float deltaTime = Time.DeltaTime;
-            NativeArray<Translation> translationArray = _query.ToComponentDataArray<Translation>(Unity.Collections.Allocator.TempJob);
-            NativeArray<AgentData> agentsDataArray = _query.ToComponentDataArray<AgentData>(Unity.Collections.Allocator.TempJob);
-            NativeArray<Entity> entities = _query.ToEntityArray(Unity.Collections.Allocator.TempJob);
+            var translationArray = _query.ToComponentDataArray<Translation>(Unity.Collections.Allocator.Persistent);
+            var agentsDataArray = _query.ToComponentDataArray<AgentData>(Unity.Collections.Allocator.Persistent);
 
-            Entities.ForEach((ref Translation translation, ref AgentData agent) =>
+            EntityManager.GetAllUniqueSharedComponentData(_settings);
+            AgentSettings settings = _settings[1];
+
+            Entities.ForEach((int entityInQueryIndex, ref Translation translation, ref AgentData agent) =>
             {
-                //SEEK or MOVE
-                float3 seekingForce = agent.direction*agent.maxForce;
+                float3 frictionForce = math.normalizesafe(-agent.velocity) * settings.maxForce/2f;
+                float3 movingForce = agent.direction * settings.maxForce;
+                float3 seekingForce = Seek(in translation, in agent, in settings);
+                float3 fleeingForce = Flee(entityInQueryIndex , in translation, in agent, settings, in translationArray);
+                float3 flockingForce = Flock(entityInQueryIndex, in translation, settings, in agentsDataArray, in translationArray);
+                float3 steeringForce = frictionForce + movingForce* agent.moveWeight + seekingForce* agent.seekWeight + fleeingForce*agent.fleeWeight+ flockingForce*agent.flockWeight;
+                float3 acceleration = steeringForce / settings.mass;
 
-                //FLEE
-                float3 fleeingForce = Flee(translation, agent, agentsDataArray, translationArray, 1f);
-                
-                //FLOCK
-                float3 flockingForce = Flock(translation, agent, agentsDataArray, translationArray, 1f);
-                flockingForce *= 10f;
-
-                agent.steeringForce = seekingForce + fleeingForce + flockingForce;
-
-                float3 acceleration = agent.steeringForce / agent.mass;
-                if (math.length(agent.velocity) < agent.maxSpeed)
+                agent.velocity += acceleration * deltaTime;
+                float speed = math.length(agent.velocity);
+                if(speed > settings.maxSpeed)
                 {
-                    agent.velocity += acceleration * deltaTime;
-                }
-                else
-                {
-                    agent.velocity += acceleration * deltaTime;
                     agent.velocity = math.normalizesafe(agent.velocity);
-                    agent.velocity *= agent.maxSpeed;
+                    agent.velocity *= settings.maxSpeed;
                 }
 
                 translation.Value += agent.velocity * deltaTime;
 
             }).ScheduleParallel();
 
-
-            
-            //translationArray.Dispose();
-            //agentsDataArray.Dispose();
+            translationArray.Dispose(Dependency);
+            agentsDataArray.Dispose(Dependency);
         }
 
         protected override void OnDestroy()
@@ -72,52 +65,66 @@ namespace Core
             base.OnDestroy();
         }
 
-        private static float3 Flee(Translation translation, AgentData agent, NativeArray<AgentData> agentsDataArray, NativeArray<Translation> translationArray, float neighborRadius)
+        private static float3 Seek(in Translation translation, in AgentData agent, in AgentSettings settings)
+        {
+            float3 desiredVelocity = math.normalizesafe(agent.targetPosition - translation.Value);
+            desiredVelocity *= settings.maxSpeed;
+
+            float3 steeringForce = (desiredVelocity - agent.velocity);
+            steeringForce /= settings.maxSpeed;
+            steeringForce *= settings.maxForce;
+            return steeringForce;
+        }
+
+        private static float3 Flee(int index, in Translation translation, in AgentData agent, in AgentSettings settings, in NativeArray<Translation> translationArray)
         {
             float3 fleeingForce = 0;
             for (int i = 0; i < translationArray.Length; i++)
             {
-                if (math.length(translationArray[i].Value - translation.Value) > 1f)
+                if(i != index)
                 {
-                    float3 steering = translation.Value - translationArray[i].Value;
-                    steering = math.normalize(steering);
+                    if (math.length(translationArray[i].Value - translation.Value) < settings.neighborRadius)
+                    {
+                        float3 steering = translation.Value - translationArray[i].Value;
+                        steering = math.normalize(steering);
 
-                    fleeingForce = steering * agent.maxSpeed - agent.velocity;
-                    fleeingForce /= agent.maxSpeed;
-                    fleeingForce *= agent.maxForce;
+                        fleeingForce = steering * settings.maxSpeed - agent.velocity;
+                        fleeingForce /= settings.maxSpeed;
+                        fleeingForce *= settings.maxForce;
+                    }
                 }
             }
 
-            return fleeingForce /= 100f;
+            return fleeingForce;
         }
 
-        public static float3 Flock(Translation translation, AgentData agent, NativeArray<AgentData> agentsDataArray, NativeArray<Translation> translationArray , float neighborRadius)
+        public static float3 Flock(int index, in Translation translation, in AgentSettings settings, in NativeArray<AgentData> agentsDataArray, in NativeArray<Translation> translationArray)
         {
             int neighborCount = 0;
             float3 separationVector = float3.zero;
             float3 averagePosition = float3.zero;
             float3 averageVelocity = float3.zero;
-            float3 separationDirection = float3.zero;
-            float3 cohesionDirection = float3.zero;
-            float3 alignmentDirection = float3.zero;
+
+            float3 separationDirection;
+            float3 cohesionDirection;
+            float3 alignmentDirection;
 
             for (int i = 0; i < agentsDataArray.Length; i++)
             {
-                float3 otherAgentPos = translationArray[i].Value;
-                if (math.length(otherAgentPos - translation.Value) < 10f && math.length(otherAgentPos - translation.Value) > 0)
+                if(i != index)
                 {
-                    separationVector += translation.Value - otherAgentPos;
-                    averagePosition += otherAgentPos;
-                    averageVelocity += agentsDataArray[i].velocity;
+                    float3 otherAgentPos = translationArray[i].Value;
+                    if (math.length(otherAgentPos - translation.Value) < settings.neighborRadius)
+                    {
+                        separationVector += translation.Value - otherAgentPos;
+                        averagePosition += otherAgentPos;
+                        averageVelocity += agentsDataArray[i].velocity;
 
-                    ++neighborCount;
+                        ++neighborCount;
+                    }
                 }
             }
-            if (neighborCount == 0)
-            {
-                Debug.Log("no neighbors");
-                return 0f;
-            }
+
             separationVector /= neighborCount;
             separationDirection = math.normalizesafe(separationVector);
             averagePosition /= neighborCount;
@@ -126,7 +133,7 @@ namespace Core
             averageVelocity /= neighborCount;
             alignmentDirection = math.normalizesafe(averageVelocity);
 
-            return separationDirection * K_SEPARATION_FORCE + cohesionDirection * K_COHESION_FORCE + alignmentDirection * K_ALIGNMENT_FORCE;
+            return separationDirection * settings.separationWeight + cohesionDirection * settings.cohesionWeight + alignmentDirection * settings.alignmentWeight;
         }
     }
 }

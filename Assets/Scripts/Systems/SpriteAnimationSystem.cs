@@ -6,7 +6,7 @@ using Unity.Jobs;
 using Unity.Transforms;
 using Unity.Mathematics;
 
-namespace Core
+namespace Spartans
 {
 	[DisableAutoCreation]
 	//[AlwaysSynchronizeSystem]
@@ -23,7 +23,7 @@ namespace Core
 				{
 					spriteAnimationData.frameTimer -= spriteAnimationData.frameTimerMax;
 
-					SpriteSheetInfo.SpriteSheetAnimation animation = GameManager.Instance.SpriteSheetInfo.GetSpriteSheetAnimation(spriteAnimationData.animation, spriteAnimationData.direction);
+					SpriteSheetInfo.SpriteSheetAnimation animation = Bootstrap.Instance.SpriteSheetInfo.GetSpriteSheetAnimation(spriteAnimationData.animation, spriteAnimationData.direction);
 					spriteAnimationData.currentCell.x++;
 					if (spriteAnimationData.currentCell.x > animation.endCell.x)
 					{

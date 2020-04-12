@@ -8,7 +8,7 @@ using Unity.Transforms;
 using Unity.Collections;
 using Unity.Mathematics;
 
-namespace Core
+namespace Spartans
 {
     [DisableAutoCreation]
     //[UpdateAfter(typeof(SpriteAnimationSystem))]
@@ -19,8 +19,8 @@ namespace Core
             MaterialPropertyBlock materialPropertyBlock = new MaterialPropertyBlock();
             Vector4[] uv = new Vector4[1];
             Camera camera = Camera.main;
-            Mesh quadMesh = GameManager.Instance._quadMesh;
-            Material material = GameManager.Instance._spriteMaterial;
+            Mesh quadMesh = Bootstrap.Instance._quadMesh;
+            Material material = Bootstrap.Instance._spriteMaterial;
             int shaderPropertyId = Shader.PropertyToID("_MainTex_UV");
 
             Entities.ForEach((ref SpriteAnimationData spriteAnimationData) =>

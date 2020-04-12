@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3345340463289892005}
   - component: {fileID: 6344166322542161831}
   m_Layer: 0
-  m_Name: GameManager
+  m_Name: Bootstrap
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -41,17 +41,17 @@ MonoBehaviour:
   m_GameObject: {fileID: 3345340463289892004}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e4d48c1c136e8245b3c3010ddcbf286, type: 3}
+  m_Script: {fileID: 11500000, guid: a970b404b01b2bf4fad38450a7a956bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _numSpartans: 150
+  _numSpartans: 300
   _numRows: 10
   _spartanSpeed: 1
   _spawnTime: 0.05
   _spartanSpritePrefab: {fileID: 840251001833136656, guid: c7e351181b6f1cf46b9b94354e77179c,
     type: 3}
-  _quadMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
-  _spriteMaterial: {fileID: 2100000, guid: e3c9024390992a6499b9329e1ee20b2e, type: 2}
+  _quadMesh: {fileID: 0}
+  _spriteMaterial: {fileID: 0}
 --- !u!114 &6344166322542161831
 MonoBehaviour:
   m_ObjectHideFlags: 0

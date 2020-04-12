@@ -7,12 +7,12 @@ using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Transforms;
 
-namespace Core
+namespace Spartans
 {
     [RequireComponent(typeof(SpriteSheetInfo))]
-    public class GameManager : MonoBehaviour
+    public class Bootstrap : MonoBehaviour
     {
-        public static GameManager Instance;
+        public static Bootstrap Instance;
 
         private SpriteSheetInfo _spriteSheetInfo;
         public SpriteSheetInfo SpriteSheetInfo { get => _spriteSheetInfo; }
@@ -61,11 +61,21 @@ namespace Core
             {
                 for(int j = 0; j < _numRows; j++)
                 {
-                    Entity entity = _manager.Instantiate(_spartanEntity);
+                    Entity newEntity = _manager.Instantiate(_spartanEntity);
                     Vector3 pos = new Vector3(_separation * i, 0f, _separation * j);
                     Quaternion rot = Quaternion.identity;
-                    _manager.SetComponentData(entity, new Translation { Value = pos });
-                    _manager.SetComponentData(entity, new Rotation { Value = rot });
+                    _manager.SetComponentData(newEntity, new Translation { Value = pos });
+                    _manager.SetComponentData(newEntity, new Rotation { Value = rot });
+                    _manager.AddComponentData(newEntity, new AgentData { });
+                    _manager.AddComponentData(newEntity, new SpartanActionsData { });
+                    _manager.AddSharedComponentData(newEntity, new AgentSettings {
+                        mass = 0.2f,
+                        maxSpeed = 1.95f,
+                        maxForce = 1.75f,
+                        separationWeight = 5f,
+                        cohesionWeight = 1.6f,
+                        alignmentWeight = 1f
+                    });
                 }
             }
         }
