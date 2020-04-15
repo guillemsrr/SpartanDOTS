@@ -14,7 +14,6 @@ namespace Spartans
     public class FormationSystem : SystemBase
     {
         EntityQuery _query;
-        int _numCols = 5;
         float _rowSeparation = 2f;
         float _colSeparation = 2f;
 
@@ -34,20 +33,18 @@ namespace Spartans
             float3 averagePosition = float3.zero;
             Entities.ForEach((in Translation translation, in AgentData agent) =>
             {
-                //if (agent.formationPosition.Equals(new int2()))
-                //{
-                //    if(math.length(math.normalizesafe(agent.velocity)) < 0.1f)
-                //    {
-                //        Debug.Log("out because leader stop");
-                //        return;
-                //    }
-                //}
                 averageVelocity += agent.velocity;
                 averagePosition += translation.Value;
 
             }).Run();
 
             int numSpartans = _query.CalculateEntityCount();
+            int numberColumns = Environment.NumberColumns;
+            if (numSpartans/ numberColumns <1)
+            {
+                numberColumns = numSpartans - 1;
+                Environment.NumberColumns = numberColumns;
+            }
 
             //job.Complete();//provisional
 
@@ -66,10 +63,10 @@ namespace Spartans
             Entities.ForEach((int entityInQueryIndex, in Translation translation, in AgentData agent) =>
             {
                 float3 direction = math.normalizesafe(translation.Value - averagePosition);
-                //angle:
+
                 float angle = Mathf.Rad2Deg*math.acos(math.dot(direction, alignmentDirection) / math.lengthsq(direction) * lengthsq);
-                //mirar quin angles em dóna
-                if (angle < 30f)
+
+                if (angle < 30f)//adjust
                 {
                     float newDistance = math.length(translation.Value - averagePosition);
                     if(newDistance > distance)
@@ -95,13 +92,12 @@ namespace Spartans
             float3 leaderPosition = translationArray[numEntity].Value;
             targetPositions[numEntity] = leaderPosition;
             formationPositions[numEntity] = new int2(0, 0);//the leader
-            //placedEntities.Add(numEntity);
 
             distance = 0f;
             //center and right side of leader
-            for (int i = 0; i < (_numCols - 1) / 2 + 1; i++)
+            for (int i = 0; i < (numberColumns - 1) / 2 + 1; i++)
             {
-                for(int j = 0; j < numSpartans/_numCols; j++)
+                for(int j = 0; j < numSpartans/numberColumns; j++)
                 {
                     //calculate target pos
                     float3 targetPos = leaderPosition + alignmentPerpendicular*i*_colSeparation - alignmentDirection*j*_rowSeparation;
@@ -131,9 +127,9 @@ namespace Spartans
 
             distance = 0f;
             //left side of leader
-            for (int i = -1; i > -((_numCols - 1) / 2 + 1); i--)// ---- REVISAR
+            for (int i = -1; i > -((numberColumns - 1) / 2 + 1); i--)
             {
-                for (int j = 0; j < numSpartans/_numCols; j++)
+                for (int j = 0; j < numSpartans/numberColumns; j++)
                 {
                     //calculate target pos
                     float3 targetPos = leaderPosition + alignmentPerpendicular * i * _colSeparation - alignmentDirection * j * _rowSeparation;

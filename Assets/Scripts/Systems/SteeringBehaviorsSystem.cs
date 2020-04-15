@@ -1,6 +1,5 @@
 ﻿using Unity.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Transforms;
@@ -27,7 +26,7 @@ namespace Spartans
         }
         protected override void OnUpdate()
         {
-            float deltaTime = Time.DeltaTime;
+            float deltaTime = Time.DeltaTime* Environment.TimeSpeed;
             var translationArray = _query.ToComponentDataArray<Translation>(Unity.Collections.Allocator.Persistent);
             var agentsDataArray = _query.ToComponentDataArray<AgentData>(Unity.Collections.Allocator.Persistent);
 
@@ -51,6 +50,8 @@ namespace Spartans
                     agent.velocity = math.normalizesafe(agent.velocity);
                     agent.velocity *= settings.maxSpeed;
                 }
+
+                agent.velocity.y = 0;
 
                 translation.Value += agent.velocity * deltaTime;
 
