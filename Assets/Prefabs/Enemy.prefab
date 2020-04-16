@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 840251001833136652}
   m_Layer: 0
-  m_Name: Spartan
+  m_Name: Enemy
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -90,7 +90,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 7cb42e8e62d4f7d4db95dfe74035d70e, type: 2}
+  - {fileID: 2100000, guid: 7202a8c0d5008904ca9f91a6227135ad, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -171,7 +171,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 7202a8c0d5008904ca9f91a6227135ad, type: 2}
+  - {fileID: 2100000, guid: 2f5ee20be002ca14b8e51f4696480461, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

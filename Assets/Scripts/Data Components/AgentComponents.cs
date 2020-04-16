@@ -6,26 +6,23 @@ using System.ComponentModel;
 
 namespace Spartans
 {
-    [AddComponentMenu("DOTS Components/Movement")]
-    [GenerateAuthoringComponent]
-
     #region Components
     public struct AgentData : IComponentData
     {
         //steering
         public float3 direction;
         public float3 velocity;
-        public float4 rotation;
-
+        public float3 forward;
+        public float3 targetPosition;
+        public float3 steeringForce;
         //weights:
         public float moveWeight;
         public float seekWeight;
         public float fleeWeight;
         public float flockWeight;
 
-        //formation:
-        public int2 formationPosition;
-        public float3 targetPosition;
+        //smooths:
+        public float forwardSmooth;
     }
     #endregion
 
@@ -47,16 +44,6 @@ namespace Spartans
         public float alignmentWeight;
         [DefaultValue(1f)]
         public float neighborRadius;
-    }
-
-    public struct LeaderData : ISharedComponentData
-    {
-
-    }
-
-    public struct SpartanActionsData : IComponentData
-    {
-
     }
 
     #endregion

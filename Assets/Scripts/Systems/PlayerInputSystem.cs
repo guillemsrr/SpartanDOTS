@@ -53,7 +53,7 @@ namespace Spartans
 		{
 			float2 vector2 = new float2(context.ReadValue<Vector2>());
 			float3 moveInput = vector2.x * _camera.transform.right + vector2.y * Vector3.Scale(_camera.transform.forward, new Vector3(1, 0, 1)).normalized;
-			JobHandle job = Entities.ForEach((ref AgentData agent) =>
+			JobHandle job = Entities.WithAll<SpartanData>().ForEach((ref AgentData agent) =>
 			{
 				agent.direction = moveInput;
 				//TODO randomize the seek weight so that they walk differently

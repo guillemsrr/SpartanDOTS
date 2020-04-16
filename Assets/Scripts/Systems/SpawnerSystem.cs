@@ -9,9 +9,10 @@ namespace Spartans
     public class SpawnerSystem : ComponentSystem
     {
         EntityQuery _mainGroup;
-        float _numEntities;
+        float _numSpartanEntities;
+        float _numEnemyEntities = 10;
 
-        public float NumEntities { set { _numEntities = value; } }
+        public float NumEntities { set { _numSpartanEntities = value; } }
         protected override void OnCreate()
         {
             _mainGroup = GetEntityQuery(
@@ -21,21 +22,48 @@ namespace Spartans
 
         protected override void OnUpdate()
         {
-            Entities.ForEach((Entity spawnerEntity, ref SpartanSpawn spawnerData, ref Translation translation) =>
+            //SPARTANS
+            Entities.ForEach((Entity spawnerEntity, ref SpartanSpawn spartanSpawn, ref Translation translation) =>
             {
-                for (int i = 0; i< _numEntities; i++)
+                for (int i = 0; i< _numSpartanEntities; i++)
                 {
-                    var newEntity = PostUpdateCommands.Instantiate(spawnerData.Prefab);
-                    Vector3 pos = new Vector3(UnityEngine.Random.Range(-5f, 5f), 0f, UnityEngine.Random.Range(-5f, 5f));
+                    var newEntity = PostUpdateCommands.Instantiate(spartanSpawn.Prefab);
+                    Vector3 pos = new Vector3(UnityEngine.Random.Range(-5f, 5f), 0f, UnityEngine.Random.Range(-5f, 5f) - 10f);
                     PostUpdateCommands.SetComponent(newEntity, new Translation { Value = pos });
                     PostUpdateCommands.AddComponent(newEntity, new Rotation { Value = Quaternion.identity });
-                    PostUpdateCommands.AddComponent(newEntity, new SpartanActionsData { });
-                    PostUpdateCommands.AddComponent(newEntity, new AgentData {
+                    PostUpdateCommands.AddComponent(newEntity, new SpartanData { });
+                    PostUpdateCommands.AddComponent(newEntity, new AgentData
+                    {
+                        targetPosition = pos,
                         moveWeight = 1.5f,
-                        seekWeight = 100f,
+                        seekWeight = 2f,
                         fleeWeight = 0.9f,
                         flockWeight = 1f,
-                        targetPosition = pos
+                        forward = new float3(1, 0, 0),
+                        forwardSmooth = 0.5f
+                    });
+                }
+            });
+
+            //ENEMIES
+            Entities.ForEach((Entity spawnerEntity, ref EnemySpawn enemySpawn, ref Translation translation) =>
+            {
+                for (int i = 0; i < _numEnemyEntities; i++)
+                {
+                    var newEntity = PostUpdateCommands.Instantiate(enemySpawn.Prefab);
+                    Vector3 pos = new Vector3(UnityEngine.Random.Range(-5f, 5f), 0f, UnityEngine.Random.Range(-5f, 5f) + 10f);
+                    PostUpdateCommands.SetComponent(newEntity, new Translation { Value = pos });
+                    PostUpdateCommands.AddComponent(newEntity, new Rotation { Value = Quaternion.identity });
+                    PostUpdateCommands.AddComponent(newEntity, new EnemyData {});
+                    PostUpdateCommands.AddComponent(newEntity, new AgentData
+                    {
+                        targetPosition = pos,
+                        moveWeight = 1.5f,
+                        seekWeight = 2f,
+                        fleeWeight = 0.9f,
+                        flockWeight = 1f,
+                        forward = new float3(1, 0, 0),
+                        forwardSmooth = 0.5f
                     });
                 }
             });

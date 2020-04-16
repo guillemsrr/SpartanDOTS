@@ -67,7 +67,7 @@ namespace Spartans
                     _manager.SetComponentData(newEntity, new Translation { Value = pos });
                     _manager.SetComponentData(newEntity, new Rotation { Value = rot });
                     _manager.AddComponentData(newEntity, new AgentData { });
-                    _manager.AddComponentData(newEntity, new SpartanActionsData { });
+                    _manager.AddComponentData(newEntity, new SpartanData { });
                     _manager.AddSharedComponentData(newEntity, new AgentSettings {
                         mass = 0.2f,
                         maxSpeed = 1.95f,

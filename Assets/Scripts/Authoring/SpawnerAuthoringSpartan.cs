@@ -7,14 +7,14 @@ namespace Spartans
 {
 
     [RequiresEntityConversion]
-    public class SpawnerAuthoring : MonoBehaviour, IDeclareReferencedPrefabs, IConvertGameObjectToEntity
+    public class SpawnerAuthoringSpartan : MonoBehaviour, IDeclareReferencedPrefabs, IConvertGameObjectToEntity
     {
-        public GameObject _prefab;
+        public GameObject _spartanPrefab;
 
         // Referenced prefabs have to be declared so that the conversion system knows about them ahead of time
         public void DeclareReferencedPrefabs(List<GameObject> referencedPrefabs)
         {
-            referencedPrefabs.Add(_prefab);
+            referencedPrefabs.Add(_spartanPrefab);
         }
 
         // Lets you convert the editor data representation to the entity optimal runtime representation
@@ -24,7 +24,7 @@ namespace Spartans
             {
                 // The referenced prefab will be converted due to DeclareReferencedPrefabs.
                 // So here we simply map the game object to an entity reference to that prefab.
-                Prefab = conversionSystem.GetPrimaryEntity(_prefab),
+                Prefab = conversionSystem.GetPrimaryEntity(_spartanPrefab),
             };
             dstManager.AddComponentData(entity, spawnerData);
         }
@@ -40,7 +40,7 @@ namespace Spartans
     {
         protected override void OnUpdate()
         {
-            Entities.ForEach((SpawnerAuthoring spawnerAuthoring) =>
+            Entities.ForEach((SpawnerAuthoringSpartan spawnerAuthoring) =>
             {
                 var entity = GetPrimaryEntity(spawnerAuthoring);
 
@@ -52,12 +52,8 @@ namespace Spartans
                     separationWeight = 5f,
                     cohesionWeight = 1.6f,
                     alignmentWeight = 1f,
-                    neighborRadius = 0.85f
+                    neighborRadius = 0.85f,
                 });
-
-                // Remove default transform system components
-                //DstEntityManager.RemoveComponent<Translation>(entity);
-                //DstEntityManager.RemoveComponent<Rotation>(entity);
             });
         }
     }

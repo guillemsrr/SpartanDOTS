@@ -29,6 +29,16 @@ namespace Spartans
 
         protected override void OnUpdate()
         {
+            var directionArray = _query.ToComponentDataArray<AgentData>(Allocator.TempJob);
+            if (math.length(directionArray[0].direction) == 0)
+            {
+                directionArray.Dispose();
+                return;
+            }
+
+            directionArray.Dispose();
+
+
             float3 averageVelocity = float3.zero;
             float3 averagePosition = float3.zero;
             Entities.ForEach((in Translation translation, in AgentData agent) =>
@@ -80,7 +90,7 @@ namespace Spartans
 
             var formationPositions = new NativeArray<int2>(numSpartans, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             var targetPositions = new NativeArray<float3>(numSpartans, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            var translationArray = _query.ToComponentDataArray<Translation>(Unity.Collections.Allocator.Persistent);
+            var translationArray = _query.ToComponentDataArray<Translation>(Allocator.Persistent);
             NativeList<Translation> positionsList = new NativeList<Translation>(numSpartans, Allocator.TempJob);
             NativeList<int> placedEntities = new NativeList<int>(numSpartans, Allocator.TempJob);
 
@@ -157,10 +167,10 @@ namespace Spartans
                 }
             }
 
-            JobHandle job = Entities.ForEach((int entityInQueryIndex, ref AgentData agent) =>
+            JobHandle job = Entities.ForEach((int entityInQueryIndex, ref AgentData agent, ref SpartanData spartan) =>
             {
                 agent.targetPosition = targetPositions[entityInQueryIndex];
-                agent.formationPosition = formationPositions[entityInQueryIndex];
+                spartan.formationPosition = formationPositions[entityInQueryIndex];
 
             }).Schedule(Dependency);
 
