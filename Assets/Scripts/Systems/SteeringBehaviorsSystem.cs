@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Spartans
 {
-    [UpdateAfter(typeof(PlayerInputSystem))]//maybe it's unnecessary or i should find another way. It's not in OnUpdate()
+    //[UpdateAfter(typeof(PlayerInputSystem))]//maybe it's unnecessary or i should find another way. It's not in OnUpdate()
     public class SteeringBehaviorsSystem : SystemBase
     {
         EntityQuery _spartanQuery;
@@ -72,9 +72,16 @@ namespace Spartans
                     float3 frictionForce = math.normalizesafe(-agent.velocity) * settings.maxForce / 2f;
                     float3 movingForce = agent.direction * settings.maxForce;
                     float3 seekingForce = Seek(in translation, in agent, in settings);
-                    commonSteeringForces[entityInQueryIndex] = frictionForce + movingForce * agent.moveWeight + seekingForce * agent.seekWeight;
+                    float3 steeringForces = frictionForce + movingForce * agent.moveWeight + seekingForce * agent.seekWeight;
+
+                    if (math.length(steeringForces) < 0.01f)
+                    {
+                        steeringForces = float3.zero;
+                    }
+
+                    commonSteeringForces[entityInQueryIndex] = steeringForces;
                     //temporal
-                    agent.steeringForce = frictionForce + movingForce * agent.moveWeight + seekingForce * agent.seekWeight;
+                    agent.steeringForce = steeringForces;
                 }).ScheduleParallel(Dependency);
 
             Dependency = commonSteeringJobHandle;
@@ -103,7 +110,14 @@ namespace Spartans
                         fleeingForce = Flee(in entity, in enemyEntityArray, in translation, in agent, settings, in enemyTranslationArray);
                         fleeingForce += EnemyFlee(in translation, in agent, settings, in spartanTranslationArray) * agent.enemyFleeRelation;
                     }
+
+                    if (math.length(fleeingForce) < 0.01f)
+                    {
+                        fleeingForce = float3.zero;
+                    }
+
                     fleeSteeringForces[entityInQueryIndex] = fleeingForce * agent.fleeWeight;
+
                     //temporal
                     agent.steeringForce += fleeingForce * agent.fleeWeight;
                 }).ScheduleParallel(Dependency);
@@ -134,7 +148,12 @@ namespace Spartans
                     {
                         flockingForce = Flock(in entity, in enemyEntityArray, in translation, settings, in enemyAgentsArray, in enemyTranslationArray);
                     }
-                    flockSteeringForces[entityInQueryIndex] += flockingForce * agent.flockWeight;
+
+                    if(math.length(flockingForce) < 0.01f)
+                    {
+                        flockingForce = float3.zero;
+                    }
+                    flockSteeringForces[entityInQueryIndex] = flockingForce * agent.flockWeight;
                     agent.steeringForce += flockingForce * agent.flockWeight;
                 }).ScheduleParallel(Dependency);
 
@@ -146,18 +165,22 @@ namespace Spartans
             Dependency = JobHandle.CombineDependencies(jobHandles);
 
             Dependency.Complete();
-            foreach (var x in commonSteeringForces)
-            {
-                Debug.Log("1 COMMON FORCE: " + x);
-            }
-            foreach (var x in fleeSteeringForces)
-            {
-                Debug.Log("2 FLEE FORCE: " + x);
-            }
-            foreach (var x in flockSteeringForces)
-            {
-                Debug.Log("3 FLOCK FORCE: " + x);
-            }
+            //foreach (var x in commonSteeringForces)
+            //{
+            //    Debug.Log("1 COMMON FORCE: " + x);
+            //}
+            //foreach (var x in fleeSteeringForces)
+            //{
+            //    Debug.Log("2 FLEE FORCE: " + x);
+            //}
+            //foreach (var x in flockSteeringForces)
+            //{
+            //    Debug.Log("3 FLOCK FORCE: " + x);
+            //}
+            //Debug.Log("----------------");
+            //Debug.Log("COMMON " + commonSteeringForces[0]);
+            //Debug.Log("FLEE " + fleeSteeringForces[0]);
+            //Debug.Log("FLOCK " + flockSteeringForces[0]);
 
             ////COMMON MRUA
             Dependency = Entities

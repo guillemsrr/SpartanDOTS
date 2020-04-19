@@ -10,7 +10,7 @@ namespace Spartans
     {
         EntityQuery _mainGroup;
         float _numSpartanEntities;
-        float _numEnemyEntities = 10;
+        float _numEnemyEntities = 1;
 
         public float NumEntities { set { _numSpartanEntities = value; } }
         protected override void OnCreate()
