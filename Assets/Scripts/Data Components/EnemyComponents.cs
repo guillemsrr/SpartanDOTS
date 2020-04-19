@@ -6,7 +6,7 @@ using System.ComponentModel;
 
 namespace Spartans
 {
-    public struct EnemyData : IComponentData
+    public struct EnemyTag : IComponentData
     {
         
     }

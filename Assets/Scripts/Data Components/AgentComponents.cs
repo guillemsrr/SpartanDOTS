@@ -15,10 +15,12 @@ namespace Spartans
         public float3 forward;
         public float3 targetPosition;
         public float3 steeringForce;
+
         //weights:
         public float moveWeight;
         public float seekWeight;
         public float fleeWeight;
+        public float enemyFleeRelation;
         public float flockWeight;
 
         //smooths:

@@ -4,14 +4,13 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Transforms;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace Spartans
 {
     [UpdateAfter(typeof(PlayerInputSystem))]//maybe it's unnecessary or i should find another way. It's not in OnUpdate()
-    //[UpdateAfter(typeof(FormationSystem))]//potential bottleneck
     public class SteeringBehaviorsSystem : SystemBase
     {
-        EntityQuery _commonQuery;
         EntityQuery _spartanQuery;
         EntityQuery _enemyQuery;
         List<AgentSettings> _settings = new List<AgentSettings>();
@@ -20,17 +19,11 @@ namespace Spartans
         {
             base.OnCreate();
 
-            _commonQuery = GetEntityQuery
-                (
-                    typeof(Translation),
-                    typeof(AgentData)
-                );
-
             _spartanQuery = GetEntityQuery(new EntityQueryDesc
             {
-                None = new ComponentType[] { typeof(EnemyData) },
+                None = new ComponentType[] { typeof(EnemyTag) },
                 All = new ComponentType[] {
-                    ComponentType.ReadOnly<SpartanData>(),
+                    ComponentType.ReadOnly<SpartanTag>(),
                     typeof(Translation),
                     typeof(AgentData),
                 }
@@ -38,15 +31,14 @@ namespace Spartans
 
             _enemyQuery = GetEntityQuery(new EntityQueryDesc
             {
-                None = new ComponentType[] { typeof(SpartanData) },
+                None = new ComponentType[] { typeof(SpartanTag) },
                 All = new ComponentType[] {
-                    ComponentType.ReadOnly<EnemyData>(),
+                    ComponentType.ReadOnly<EnemyTag>(),
                     typeof(Translation),
                     typeof(AgentData),
                 }
             });
 
-            RequireForUpdate(_commonQuery);
             RequireForUpdate(_spartanQuery);
             RequireForUpdate(_enemyQuery);
 
@@ -58,90 +50,160 @@ namespace Spartans
             EntityManager.GetAllUniqueSharedComponentData(_settings);
             AgentSettings settings = _settings[1];
 
-            var translationArray = _commonQuery.ToComponentDataArray<Translation>(Allocator.TempJob);
-            var agentsDataArray = _commonQuery.ToComponentDataArray<AgentData>(Allocator.TempJob);
             var spartanAgentsArray = _spartanQuery.ToComponentDataArray<AgentData>(Allocator.TempJob);
             var spartanTranslationArray = _spartanQuery.ToComponentDataArray<Translation>(Allocator.TempJob);
+            var spartanEntityArray = _spartanQuery.ToEntityArray(Allocator.TempJob);
             var enemyAgentsArray = _enemyQuery.ToComponentDataArray<AgentData>(Allocator.TempJob);
             var enemyTranslationArray = _enemyQuery.ToComponentDataArray<Translation>(Allocator.TempJob);
+            var enemyEntityArray = _enemyQuery.ToEntityArray(Allocator.TempJob);
+
+            var jobHandles = new NativeArray<JobHandle>(3, Allocator.TempJob);
+            int numEntities = _spartanQuery.CalculateEntityCount() + _enemyQuery.CalculateEntityCount();
+            ComponentDataFromEntity<SpartanTag> spartanFromEntity = GetComponentDataFromEntity<SpartanTag>(true);
+            ComponentDataFromEntity<EnemyTag> enemyFromEntity = GetComponentDataFromEntity<EnemyTag>(true);
 
             //COMMON STEERING
+            var commonSteeringForces = new NativeArray<float3>(numEntities, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             JobHandle commonSteeringJobHandle = Entities
+                .WithName("Common_Steering")
+                .WithNativeDisableParallelForRestriction(commonSteeringForces)
                 .ForEach((int entityInQueryIndex, ref Translation translation, ref AgentData agent) =>
                 {
                     float3 frictionForce = math.normalizesafe(-agent.velocity) * settings.maxForce / 2f;
                     float3 movingForce = agent.direction * settings.maxForce;
                     float3 seekingForce = Seek(in translation, in agent, in settings);
-                    float3 fleeingForce = Flee(entityInQueryIndex, in translation, in agent, settings, in translationArray);
-
-                    agent.steeringForce = frictionForce + movingForce * agent.moveWeight + seekingForce * agent.seekWeight + fleeingForce * agent.fleeWeight;
-
+                    commonSteeringForces[entityInQueryIndex] = frictionForce + movingForce * agent.moveWeight + seekingForce * agent.seekWeight;
+                    //temporal
+                    agent.steeringForce = frictionForce + movingForce * agent.moveWeight + seekingForce * agent.seekWeight;
                 }).ScheduleParallel(Dependency);
 
             Dependency = commonSteeringJobHandle;
 
-            //SPARTAN FLOCK
-            JobHandle spartanFlockJobHandle = Entities
-                .WithAll<SpartanData>()
-                .ForEach((int entityInQueryIndex, ref Translation translation, ref AgentData agent, ref Rotation rotation) =>
+            //FLEE
+            var fleeSteeringForces = new NativeArray<float3>(numEntities, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            JobHandle fleeJobHandle = Entities
+                .WithName("Flee")
+                .WithReadOnly(spartanFromEntity)
+                .WithReadOnly(enemyFromEntity)
+                .WithReadOnly(spartanEntityArray)
+                .WithReadOnly(enemyEntityArray)
+                .WithReadOnly(spartanTranslationArray)
+                .WithReadOnly(enemyTranslationArray)
+                .WithNativeDisableParallelForRestriction(fleeSteeringForces)
+                .ForEach((int entityInQueryIndex, Entity entity, ref Translation translation, ref AgentData agent) =>
                 {
-                    float3 flockingForce = Flock(entityInQueryIndex, in translation, settings, in spartanAgentsArray, in spartanTranslationArray);
-                    agent.steeringForce += flockingForce * agent.flockWeight;
-
+                    float3 fleeingForce = float3.zero;
+                    if (spartanFromEntity.Exists(entity))//if is a Spartan
+                    {
+                        fleeingForce = Flee(in entity, in spartanEntityArray, in translation, in agent, settings, in spartanTranslationArray);
+                        fleeingForce += EnemyFlee(in translation, in agent, settings, in enemyTranslationArray) * agent.enemyFleeRelation;
+                    }
+                    else if (enemyFromEntity.Exists(entity))//is an Enemy
+                    {
+                        fleeingForce = Flee(in entity, in enemyEntityArray, in translation, in agent, settings, in enemyTranslationArray);
+                        fleeingForce += EnemyFlee(in translation, in agent, settings, in spartanTranslationArray) * agent.enemyFleeRelation;
+                    }
+                    fleeSteeringForces[entityInQueryIndex] = fleeingForce * agent.fleeWeight;
+                    //temporal
+                    agent.steeringForce += fleeingForce * agent.fleeWeight;
                 }).ScheduleParallel(Dependency);
 
-            Dependency = spartanFlockJobHandle;//OTHERWISE IT WILL CAUSE A NATIVE ARRAY NOT DISPOSED PROBLEM
+            Dependency = fleeJobHandle;
 
-            ////ENEMY FLOCK
-            JobHandle enemyFlockJobHandle = Entities
-                .WithAll<EnemyData>()
-                .ForEach((int entityInQueryIndex, ref Translation translation, ref AgentData agent, ref Rotation rotation) =>
+            //FLOCK
+            var flockSteeringForces = new NativeArray<float3>(numEntities, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            JobHandle flockJobHandle = Entities
+                .WithName("Flocking")
+                .WithReadOnly(spartanFromEntity)
+                .WithReadOnly(enemyFromEntity)
+                .WithReadOnly(spartanEntityArray)
+                .WithReadOnly(enemyEntityArray)
+                .WithReadOnly(spartanAgentsArray)
+                .WithReadOnly(spartanTranslationArray)
+                .WithReadOnly(enemyAgentsArray)
+                .WithReadOnly(enemyTranslationArray)
+                .WithNativeDisableParallelForRestriction(flockSteeringForces)
+                .ForEach((int entityInQueryIndex, Entity entity, ref Translation translation, ref AgentData agent, ref Rotation rotation) =>
                 {
-                    float3 flockingForce = Flock(entityInQueryIndex, in translation, settings, in enemyAgentsArray, in enemyTranslationArray);
+                    float3 flockingForce = float3.zero;
+                    if (spartanFromEntity.Exists(entity))//if is a Spartan
+                    {
+                        flockingForce = Flock(in entity, in spartanEntityArray, in translation, settings, in spartanAgentsArray, in spartanTranslationArray);
+                    }
+                    else if (enemyFromEntity.Exists(entity))//is an Enemy
+                    {
+                        flockingForce = Flock(in entity, in enemyEntityArray, in translation, settings, in enemyAgentsArray, in enemyTranslationArray);
+                    }
+                    flockSteeringForces[entityInQueryIndex] += flockingForce * agent.flockWeight;
                     agent.steeringForce += flockingForce * agent.flockWeight;
-
                 }).ScheduleParallel(Dependency);
 
-            Dependency = enemyFlockJobHandle;
+
+            jobHandles[0] = commonSteeringJobHandle;
+            jobHandles[1] = fleeJobHandle;
+            jobHandles[2] = flockJobHandle;
+
+            Dependency = JobHandle.CombineDependencies(jobHandles);
+
+            Dependency.Complete();
+            foreach (var x in commonSteeringForces)
+            {
+                Debug.Log("1 COMMON FORCE: " + x);
+            }
+            foreach (var x in fleeSteeringForces)
+            {
+                Debug.Log("2 FLEE FORCE: " + x);
+            }
+            foreach (var x in flockSteeringForces)
+            {
+                Debug.Log("3 FLOCK FORCE: " + x);
+            }
 
             ////COMMON MRUA
-            JobHandle mruaJobHandle = Entities.ForEach((ref Translation translation, ref Rotation rotation, ref AgentData agent) =>
-            {
-                float3 acceleration = agent.steeringForce / settings.mass;
-
-                agent.velocity += acceleration * deltaTime;
-                float speed = math.length(agent.velocity);
-                if (speed > settings.maxSpeed)
+            Dependency = Entities
+                .WithName("Common_MRUA")
+                //.WithReadOnly(commonSteeringForces)
+                //.WithReadOnly(fleeSteeringForces)
+                //.WithReadOnly(flockSteeringForces)
+                .ForEach((int entityInQueryIndex, ref Translation translation, ref Rotation rotation, ref AgentData agent) =>
                 {
-                    agent.velocity = math.normalizesafe(agent.velocity);
-                    agent.velocity *= settings.maxSpeed;
-                }
+                    //agent.steeringForce = commonSteeringForces[entityInQueryIndex] + fleeSteeringForces[entityInQueryIndex] + flockSteeringForces[entityInQueryIndex];
+                    float3 acceleration = agent.steeringForce / settings.mass;
 
-                agent.velocity.y = 0;
-                translation.Value += agent.velocity * deltaTime;
+                    agent.velocity += acceleration * deltaTime;
+                    float speed = math.length(agent.velocity);
+                    if (speed > settings.maxSpeed)
+                    {
+                        agent.velocity = math.normalizesafe(agent.velocity);
+                        agent.velocity *= settings.maxSpeed;
+                    }
 
-                if (speed > 0f)
-                {
-                    agent.forward = math.lerp(agent.forward, math.normalizesafe(agent.velocity), agent.forwardSmooth * deltaTime);
-                    rotation.Value = quaternion.LookRotation(new float3(agent.forward.x, 0, agent.forward.z), new float3(0, 1, 0));
-                }
+                    agent.velocity.y = 0;
+                    translation.Value += agent.velocity * deltaTime;
+                    if (speed > 0.1f)
+                    {
+                        translation.Value += agent.velocity * deltaTime;
+                        agent.forward = math.lerp(agent.forward, math.normalizesafe(agent.velocity), agent.forwardSmooth * deltaTime);
+                        rotation.Value = quaternion.LookRotation(new float3(agent.forward.x, 0, agent.forward.z), new float3(0, 1, 0));
+                    }
 
-            }).ScheduleParallel(Dependency);
+                }).ScheduleParallel(Dependency);
 
-            Dependency = mruaJobHandle;
-            JobHandle disposeJobHandle = translationArray.Dispose(Dependency);
-            disposeJobHandle = JobHandle.CombineDependencies(disposeJobHandle, agentsDataArray.Dispose(Dependency));
-            disposeJobHandle = JobHandle.CombineDependencies(disposeJobHandle, spartanAgentsArray.Dispose(Dependency));
+            JobHandle disposeJobHandle = spartanAgentsArray.Dispose(Dependency);
             disposeJobHandle = JobHandle.CombineDependencies(disposeJobHandle, spartanTranslationArray.Dispose(Dependency));
+            disposeJobHandle = JobHandle.CombineDependencies(disposeJobHandle, spartanEntityArray.Dispose(Dependency));
             disposeJobHandle = JobHandle.CombineDependencies(disposeJobHandle, enemyAgentsArray.Dispose(Dependency));
             disposeJobHandle = JobHandle.CombineDependencies(disposeJobHandle, enemyTranslationArray.Dispose(Dependency));
+            disposeJobHandle = JobHandle.CombineDependencies(disposeJobHandle, enemyEntityArray.Dispose(Dependency));
+            disposeJobHandle = JobHandle.CombineDependencies(disposeJobHandle, jobHandles.Dispose(Dependency));
+            disposeJobHandle = JobHandle.CombineDependencies(disposeJobHandle, commonSteeringForces.Dispose(Dependency));
+            disposeJobHandle = JobHandle.CombineDependencies(disposeJobHandle, fleeSteeringForces.Dispose(Dependency));
+            disposeJobHandle = JobHandle.CombineDependencies(disposeJobHandle, flockSteeringForces.Dispose(Dependency));
             Dependency = disposeJobHandle;
 
-            _commonQuery.AddDependency(Dependency);
             _spartanQuery.AddDependency(Dependency);
             _enemyQuery.AddDependency(Dependency);
 
-            _commonQuery.ResetFilter();
             _spartanQuery.ResetFilter();
             _enemyQuery.ResetFilter();
         }
@@ -162,26 +224,23 @@ namespace Spartans
         {
             float3 desiredVelocity = math.normalizesafe(agent.targetPosition - translation.Value);
             desiredVelocity *= settings.maxSpeed;
-
-            float3 steeringForce = (desiredVelocity - agent.velocity);
-            steeringForce /= settings.maxSpeed;
-            steeringForce *= settings.maxForce;
-            return steeringForce;
+            
+            return (desiredVelocity - agent.velocity);
         }
 
-        private static float3 Flee(int index, in Translation translation, in AgentData agent, in AgentSettings settings, in NativeArray<Translation> translationArray)
+        private static float3 Flee(in Entity entity, in NativeArray<Entity> entityArray, in Translation translation, in AgentData agent, in AgentSettings settings, in NativeArray<Translation> translationArray) 
         {
             float3 fleeingForce = 0;
             for (int i = 0; i < translationArray.Length; i++)
             {
-                if(i != index)
+                if(entityArray[i] != entity)
                 {
                     if (math.length(translationArray[i].Value - translation.Value) < settings.neighborRadius)
                     {
                         float3 steering = translation.Value - translationArray[i].Value;
                         steering = math.normalize(steering);
 
-                        fleeingForce = steering * settings.maxSpeed - agent.velocity;
+                        fleeingForce += steering * settings.maxSpeed - agent.velocity;
                         fleeingForce /= settings.maxSpeed;
                         fleeingForce *= settings.maxForce;
                     }
@@ -191,7 +250,34 @@ namespace Spartans
             return fleeingForce;
         }
 
-        public static float3 Flock(int index, in Translation translation, in AgentSettings settings, in NativeArray<AgentData> agentsDataArray, in NativeArray<Translation> translationArray)
+        /// <summary>
+        /// The same as Flee but without checking if it's the entity itself
+        /// </summary>
+        /// <param name="translation"></param>
+        /// <param name="agent"></param>
+        /// <param name="settings"></param>
+        /// <param name="translationArray"></param>
+        /// <returns></returns>
+        private static float3 EnemyFlee(in Translation translation, in AgentData agent, in AgentSettings settings, in NativeArray<Translation> translationArray)
+        {
+            float3 fleeingForce = 0;
+            for (int i = 0; i < translationArray.Length; i++)
+            {
+                if (math.length(translationArray[i].Value - translation.Value) < settings.neighborRadius)
+                {
+                    float3 steering = translation.Value - translationArray[i].Value;
+                    steering = math.normalize(steering);
+
+                    fleeingForce += steering * settings.maxSpeed - agent.velocity;
+                    fleeingForce /= settings.maxSpeed;
+                    fleeingForce *= settings.maxForce;
+                }
+            }
+
+            return fleeingForce;
+        }
+
+        public static float3 Flock(in Entity entity, in NativeArray<Entity> entityArray, in Translation translation, in AgentSettings settings, in NativeArray<AgentData> agentsDataArray, in NativeArray<Translation> translationArray)
         {
             int neighborCount = 0;
             float3 separationVector = float3.zero;
@@ -204,7 +290,7 @@ namespace Spartans
 
             for (int i = 0; i < agentsDataArray.Length; i++)
             {
-                if(i != index)
+                if(entity != entityArray[i])
                 {
                     float3 otherAgentPos = translationArray[i].Value;
                     if (math.length(otherAgentPos - translation.Value) < settings.neighborRadius)

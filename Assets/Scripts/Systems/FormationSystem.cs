@@ -9,6 +9,7 @@ using Unity.Mathematics;
 
 namespace Spartans
 {
+    [DisableAutoCreation]
     [AlwaysSynchronizeSystem]
     //[UpdateBefore(typeof(SteeringBehaviorsSystem))]
     public class FormationSystem : SystemBase
