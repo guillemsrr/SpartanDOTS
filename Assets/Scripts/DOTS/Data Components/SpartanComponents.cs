@@ -6,6 +6,8 @@ using System.ComponentModel;
 
 namespace Spartans
 {
+    public struct SpartanTag : IComponentData { }
+
     public struct SpartanData : IComponentData
     {
         //formation:

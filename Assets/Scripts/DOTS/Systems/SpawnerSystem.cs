@@ -10,7 +10,7 @@ namespace Spartans
     {
         EntityQuery _mainGroup;
         float _numSpartanEntities;
-        float _numEnemyEntities = 10;
+        float _numEnemyEntities = 1;
 
         public float NumEntities { set { _numSpartanEntities = value; } }
         protected override void OnCreate()
@@ -32,12 +32,14 @@ namespace Spartans
                     PostUpdateCommands.SetComponent(newEntity, new Translation { Value = pos });
                     PostUpdateCommands.AddComponent(newEntity, new Rotation { Value = Quaternion.identity });
                     PostUpdateCommands.AddComponent(newEntity, new SpartanData { });
+                    PostUpdateCommands.AddComponent(newEntity, new SpartanTag { });
                     PostUpdateCommands.AddComponent(newEntity, new AgentData
                     {
                         targetPosition = pos,
                         moveWeight = 1.5f,
                         seekWeight = 2f,
                         fleeWeight = 0.9f,
+                        enemyFleeRelation = 2f,
                         flockWeight = 1f,
                         forward = new float3(1, 0, 0),
                         forwardSmooth = 0.5f
@@ -54,13 +56,14 @@ namespace Spartans
                     Vector3 pos = new Vector3(UnityEngine.Random.Range(-5f, 5f), 0f, UnityEngine.Random.Range(-5f, 5f) + 10f);
                     PostUpdateCommands.SetComponent(newEntity, new Translation { Value = pos });
                     PostUpdateCommands.AddComponent(newEntity, new Rotation { Value = Quaternion.identity });
-                    PostUpdateCommands.AddComponent(newEntity, new EnemyData {});
+                    PostUpdateCommands.AddComponent(newEntity, new EnemyTag {});
                     PostUpdateCommands.AddComponent(newEntity, new AgentData
                     {
                         targetPosition = pos,
                         moveWeight = 1.5f,
                         seekWeight = 2f,
                         fleeWeight = 0.9f,
+                        enemyFleeRelation = 2f,
                         flockWeight = 1f,
                         forward = new float3(1, 0, 0),
                         forwardSmooth = 0.5f
