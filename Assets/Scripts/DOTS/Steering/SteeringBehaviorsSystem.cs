@@ -6,7 +6,7 @@ using Unity.Transforms;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace Spartans
+namespace Spartans.Steering
 {
     //[UpdateAfter(typeof(PlayerInputSystem))]//maybe it's unnecessary or i should find another way. It's not in OnUpdate()
     public class SteeringBehaviorsSystem : SystemBase
@@ -71,7 +71,7 @@ namespace Spartans
                 {
                     float3 frictionForce = math.normalizesafe(-agent.velocity) * settings.maxForce / 2f;
                     float3 movingForce = agent.direction * settings.maxForce;
-                    float3 seekingForce = Seek(in translation, in agent, in settings);
+                    float3 seekingForce = SteeringPhysics.Seek(in translation, in agent, in settings);
                     float3 steeringForces = frictionForce + movingForce * agent.moveWeight + seekingForce * agent.seekWeight;
 
                     if (math.length(steeringForces) < 0.01f)
@@ -102,13 +102,13 @@ namespace Spartans
                     float3 fleeingForce = float3.zero;
                     if (spartanFromEntity.Exists(entity))//if is a Spartan
                     {
-                        fleeingForce = Flee(in entity, in spartanEntityArray, in translation, in agent, settings, in spartanTranslationArray);
-                        fleeingForce += EnemyFlee(in translation, in agent, settings, in enemyTranslationArray) * agent.enemyFleeRelation;
+                        fleeingForce = SteeringPhysics.Flee(in entity, in spartanEntityArray, in translation, in agent, settings, in spartanTranslationArray);
+                        fleeingForce += SteeringPhysics.EnemyFlee(in translation, in agent, settings, in enemyTranslationArray) * agent.enemyFleeRelation;
                     }
                     else if (enemyFromEntity.Exists(entity))//is an Enemy
                     {
-                        fleeingForce = Flee(in entity, in enemyEntityArray, in translation, in agent, settings, in enemyTranslationArray);
-                        fleeingForce += EnemyFlee(in translation, in agent, settings, in spartanTranslationArray) * agent.enemyFleeRelation;
+                        fleeingForce = SteeringPhysics.Flee(in entity, in enemyEntityArray, in translation, in agent, settings, in enemyTranslationArray);
+                        fleeingForce += SteeringPhysics.EnemyFlee(in translation, in agent, settings, in spartanTranslationArray) * agent.enemyFleeRelation;
                     }
 
                     if (math.length(fleeingForce) < 0.01f)
@@ -142,11 +142,11 @@ namespace Spartans
                     float3 flockingForce = float3.zero;
                     if (spartanFromEntity.Exists(entity))//if is a Spartan
                     {
-                        flockingForce = Flock(in entity, in spartanEntityArray, in translation, settings, in spartanAgentsArray, in spartanTranslationArray);
+                        flockingForce = SteeringPhysics.Flock(in entity, in spartanEntityArray, in translation, settings, in spartanAgentsArray, in spartanTranslationArray);
                     }
                     else if (enemyFromEntity.Exists(entity))//is an Enemy
                     {
-                        flockingForce = Flock(in entity, in enemyEntityArray, in translation, settings, in enemyAgentsArray, in enemyTranslationArray);
+                        flockingForce = SteeringPhysics.Flock(in entity, in enemyEntityArray, in translation, settings, in enemyAgentsArray, in enemyTranslationArray);
                     }
 
                     if(math.length(flockingForce) < 0.01f)
@@ -234,108 +234,6 @@ namespace Spartans
         protected override void OnDestroy()
         {
             base.OnDestroy();
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="translation"></param>
-        /// <param name="agent"></param>
-        /// <param name="settings"></param>
-        /// <returns></returns>
-        private static float3 Seek(in Translation translation, in AgentData agent, in AgentSettings settings)
-        {
-            float3 desiredVelocity = math.normalizesafe(agent.targetPosition - translation.Value);
-            desiredVelocity *= settings.maxSpeed;
-            
-            return (desiredVelocity - agent.velocity);
-        }
-
-        private static float3 Flee(in Entity entity, in NativeArray<Entity> entityArray, in Translation translation, in AgentData agent, in AgentSettings settings, in NativeArray<Translation> translationArray) 
-        {
-            float3 fleeingForce = 0;
-            for (int i = 0; i < translationArray.Length; i++)
-            {
-                if(entityArray[i] != entity)
-                {
-                    if (math.length(translationArray[i].Value - translation.Value) < settings.neighborRadius)
-                    {
-                        float3 steering = translation.Value - translationArray[i].Value;
-                        steering = math.normalize(steering);
-
-                        fleeingForce += steering * settings.maxSpeed - agent.velocity;
-                        fleeingForce /= settings.maxSpeed;
-                        fleeingForce *= settings.maxForce;
-                    }
-                }
-            }
-
-            return fleeingForce;
-        }
-
-        /// <summary>
-        /// The same as Flee but without checking if it's the entity itself
-        /// </summary>
-        /// <param name="translation"></param>
-        /// <param name="agent"></param>
-        /// <param name="settings"></param>
-        /// <param name="translationArray"></param>
-        /// <returns></returns>
-        private static float3 EnemyFlee(in Translation translation, in AgentData agent, in AgentSettings settings, in NativeArray<Translation> translationArray)
-        {
-            float3 fleeingForce = 0;
-            for (int i = 0; i < translationArray.Length; i++)
-            {
-                if (math.length(translationArray[i].Value - translation.Value) < settings.neighborRadius)
-                {
-                    float3 steering = translation.Value - translationArray[i].Value;
-                    steering = math.normalize(steering);
-
-                    fleeingForce += steering * settings.maxSpeed - agent.velocity;
-                    fleeingForce /= settings.maxSpeed;
-                    fleeingForce *= settings.maxForce;
-                }
-            }
-
-            return fleeingForce;
-        }
-
-        public static float3 Flock(in Entity entity, in NativeArray<Entity> entityArray, in Translation translation, in AgentSettings settings, in NativeArray<AgentData> agentsDataArray, in NativeArray<Translation> translationArray)
-        {
-            int neighborCount = 0;
-            float3 separationVector = float3.zero;
-            float3 averagePosition = float3.zero;
-            float3 averageVelocity = float3.zero;
-
-            float3 separationDirection;
-            float3 cohesionDirection;
-            float3 alignmentDirection;
-
-            for (int i = 0; i < agentsDataArray.Length; i++)
-            {
-                if(entity != entityArray[i])
-                {
-                    float3 otherAgentPos = translationArray[i].Value;
-                    if (math.length(otherAgentPos - translation.Value) < settings.neighborRadius)
-                    {
-                        separationVector += translation.Value - otherAgentPos;
-                        averagePosition += otherAgentPos;
-                        averageVelocity += agentsDataArray[i].velocity;
-
-                        ++neighborCount;
-                    }
-                }
-            }
-
-            separationVector /= neighborCount;
-            separationDirection = math.normalizesafe(separationVector);
-            averagePosition /= neighborCount;
-            averagePosition -= translation.Value;
-            cohesionDirection = math.normalizesafe(averagePosition);
-            averageVelocity /= neighborCount;
-            alignmentDirection = math.normalizesafe(averageVelocity);
-
-            return separationDirection * settings.separationWeight + cohesionDirection * settings.cohesionWeight + alignmentDirection * settings.alignmentWeight;
         }
     }
 }
