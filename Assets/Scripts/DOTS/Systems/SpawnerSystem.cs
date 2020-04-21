@@ -10,7 +10,7 @@ namespace Spartans
     {
         EntityQuery _mainGroup;
         float _numSpartanEntities;
-        float _numEnemyEntities = 1;
+        float _numEnemyEntities = 10;
 
         public float NumEntities { set { _numSpartanEntities = value; } }
         protected override void OnCreate()
@@ -41,8 +41,7 @@ namespace Spartans
                         fleeWeight = 0.9f,
                         enemyFleeRelation = 2f,
                         flockWeight = 1f,
-                        forward = new float3(1, 0, 0),
-                        forwardSmooth = 0.5f
+                        orientationSmooth = 0.5f
                     });
                 }
             });
@@ -65,8 +64,7 @@ namespace Spartans
                         fleeWeight = 0.9f,
                         enemyFleeRelation = 2f,
                         flockWeight = 1f,
-                        forward = new float3(1, 0, 0),
-                        forwardSmooth = 0.5f
+                        orientationSmooth = 0.5f
                     });
                 }
             });

@@ -12,7 +12,6 @@ namespace Spartans
         //steering
         public float3 direction;
         public float3 velocity;
-        public float3 forward;
         public float3 targetPosition;
         public float3 steeringForce;
 
@@ -24,7 +23,7 @@ namespace Spartans
         public float flockWeight;
 
         //smooths:
-        public float forwardSmooth;
+        public float orientationSmooth;
     }
     #endregion
 

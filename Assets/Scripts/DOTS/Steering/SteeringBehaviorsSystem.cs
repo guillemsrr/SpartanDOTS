@@ -11,6 +11,7 @@ namespace Spartans.Steering
     //[UpdateAfter(typeof(PlayerInputSystem))]//maybe it's unnecessary or i should find another way. It's not in OnUpdate()
     public class SteeringBehaviorsSystem : SystemBase
     {
+        EntityQuery _agentQuery;
         EntityQuery _spartanQuery;
         EntityQuery _enemyQuery;
         List<AgentSettings> _settings = new List<AgentSettings>();
@@ -18,6 +19,8 @@ namespace Spartans.Steering
         protected override void OnCreate()
         {
             base.OnCreate();
+
+            _agentQuery = GetEntityQuery(typeof(AgentData));
 
             _spartanQuery = GetEntityQuery(new EntityQueryDesc
             {
@@ -46,7 +49,7 @@ namespace Spartans.Steering
         }
         protected override void OnUpdate()
         {
-            float deltaTime = Time.DeltaTime* Environment.TimeSpeed;
+            float deltaTime = Time.DeltaTime * Environment.TimeSpeed;
             EntityManager.GetAllUniqueSharedComponentData(_settings);
             AgentSettings settings = _settings[1];
 
@@ -62,6 +65,28 @@ namespace Spartans.Steering
             ComponentDataFromEntity<SpartanTag> spartanFromEntity = GetComponentDataFromEntity<SpartanTag>(true);
             ComponentDataFromEntity<EnemyTag> enemyFromEntity = GetComponentDataFromEntity<EnemyTag>(true);
 
+            FullSteeringJob fullSteeringJob = new FullSteeringJob()
+            {
+                DeltaTime = deltaTime,
+                TranslationType = GetArchetypeChunkComponentType<Translation>(),
+                RotationType = GetArchetypeChunkComponentType<Rotation>(),
+                AgentDataType = GetArchetypeChunkComponentType<AgentData>(),
+                Spartans = GetArchetypeChunkComponentType<SpartanTag>(),
+                Enemies = GetArchetypeChunkComponentType<EnemyTag>(),
+                EntityDataType = GetArchetypeChunkEntityType(),
+                settings = settings,
+                spartanTranslationArray = spartanTranslationArray,
+                spartanEntityArray = spartanEntityArray,
+                spartanAgentsArray = spartanAgentsArray,
+                enemyAgentsArray = enemyAgentsArray,
+                enemyTranslationArray = enemyTranslationArray,
+                enemyEntityArray  = enemyEntityArray
+            };
+            //BUGS->
+            //Dependency = fullSteeringJob.ScheduleParallel(_agentQuery, Dependency);
+
+#region WITH_FOREACH
+            
             //COMMON STEERING
             var commonSteeringForces = new NativeArray<float3>(numEntities, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             JobHandle commonSteeringJobHandle = Entities
@@ -149,7 +174,7 @@ namespace Spartans.Steering
                         flockingForce = SteeringPhysics.Flock(in entity, in enemyEntityArray, in translation, settings, in enemyAgentsArray, in enemyTranslationArray);
                     }
 
-                    if(math.length(flockingForce) < 0.01f)
+                    if (math.length(flockingForce) < 0.01f)
                     {
                         flockingForce = float3.zero;
                     }
@@ -206,11 +231,14 @@ namespace Spartans.Steering
                     if (speed > 0.1f)
                     {
                         translation.Value += agent.velocity * deltaTime;
-                        agent.forward = math.lerp(agent.forward, math.normalizesafe(agent.velocity), agent.forwardSmooth * deltaTime);
-                        rotation.Value = quaternion.LookRotation(new float3(agent.forward.x, 0, agent.forward.z), new float3(0, 1, 0));
+                        quaternion lookRotation = quaternion.LookRotationSafe(agent.velocity, new float3(0, 1, 0));
+                        rotation.Value = math.slerp(rotation.Value, lookRotation, agent.orientationSmooth * deltaTime);
                     }
 
                 }).ScheduleParallel(Dependency);
+
+    
+            #endregion
 
             JobHandle disposeJobHandle = spartanAgentsArray.Dispose(Dependency);
             disposeJobHandle = JobHandle.CombineDependencies(disposeJobHandle, spartanTranslationArray.Dispose(Dependency));
@@ -235,5 +263,9 @@ namespace Spartans.Steering
         {
             base.OnDestroy();
         }
+
+
     }
 }
+
+
