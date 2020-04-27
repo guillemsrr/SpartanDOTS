@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Unity.Entities;
 
-namespace Spartans
+namespace Spartans.Animation
 {
     [GenerateAuthoringComponent]
     public struct SpriteAnimationData : IComponentData

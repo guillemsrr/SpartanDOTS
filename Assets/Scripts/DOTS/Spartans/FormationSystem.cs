@@ -9,8 +9,8 @@ using Unity.Mathematics;
 
 namespace Spartans
 {
-    //[AlwaysSynchronizeSystem]
-    //[UpdateBefore(typeof(SteeringBehaviorsSystem))]
+    //[DisableAutoCreation]
+    [AlwaysSynchronizeSystem]
     public class FormationSystem : SystemBase
     {
         EntityQuery _query;

@@ -14,24 +14,24 @@ namespace Spartans.Steering
         /// <param name="agent"></param>
         /// <param name="settings"></param>
         /// <returns></returns>
-        public static float3 Seek(in Translation translation, in AgentData agent, in AgentSettings settings)
+        public static float3 Seek(in AgentData agent, in AgentSettings settings)
         {
-            float3 desiredVelocity = math.normalizesafe(agent.targetPosition - translation.Value);
+            float3 desiredVelocity = math.normalizesafe(agent.targetPosition - agent.position);
             desiredVelocity *= settings.maxSpeed;
 
             return (desiredVelocity - agent.velocity);
         }
 
-        public static float3 Flee(in Entity entity, in NativeArray<Entity> entityArray, in Translation translation, in AgentData agent, in AgentSettings settings, in NativeArray<Translation> translationArray)
+        public static float3 Flee(in AgentData agent, in NativeArray<AgentData> otherAgents, in AgentSettings settings)
         {
             float3 fleeingForce = 0;
-            for (int i = 0; i < translationArray.Length; i++)
-            {
-                if (entityArray[i] != entity)
+            for (int i = 0; i < otherAgents.Length; i++)
+            {   
+                if ( !Equals(otherAgents[i].position, agent.position))
                 {
-                    if (math.length(translationArray[i].Value - translation.Value) < settings.neighborRadius)
+                    float3 steering = agent.position - otherAgents[i].position;
+                    if (math.length(steering) < settings.neighborRadius)
                     {
-                        float3 steering = translation.Value - translationArray[i].Value;
                         steering = math.normalize(steering);
 
                         fleeingForce += steering * settings.maxSpeed - agent.velocity;
@@ -44,36 +44,10 @@ namespace Spartans.Steering
             return fleeingForce;
         }
 
-        /// <summary>
-        /// The same as Flee but without checking if it's the entity itself
-        /// </summary>
-        /// <param name="translation"></param>
-        /// <param name="agent"></param>
-        /// <param name="settings"></param>
-        /// <param name="translationArray"></param>
-        /// <returns></returns>
-        public static float3 EnemyFlee(in Translation translation, in AgentData agent, in AgentSettings settings, in NativeArray<Translation> translationArray)
-        {
-            float3 fleeingForce = 0;
-            for (int i = 0; i < translationArray.Length; i++)
-            {
-                if (math.length(translationArray[i].Value - translation.Value) < settings.neighborRadius)
-                {
-                    float3 steering = translation.Value - translationArray[i].Value;
-                    steering = math.normalize(steering);
-
-                    fleeingForce += steering * settings.maxSpeed - agent.velocity;
-                    fleeingForce /= settings.maxSpeed;
-                    fleeingForce *= settings.maxForce;
-                }
-            }
-
-            return fleeingForce;
-        }
-
-        public static float3 Flock(in Entity entity, in NativeArray<Entity> entityArray, in Translation translation, in AgentSettings settings, in NativeArray<AgentData> agentsDataArray, in NativeArray<Translation> translationArray)
+        public static float3 Flock(in Translation translation, in NativeArray<AgentData> otherAgents, in AgentSettings settings)
         {
             int neighborCount = 0;
+
             float3 separationVector = float3.zero;
             float3 averagePosition = float3.zero;
             float3 averageVelocity = float3.zero;
@@ -82,16 +56,17 @@ namespace Spartans.Steering
             float3 cohesionDirection;
             float3 alignmentDirection;
 
-            for (int i = 0; i < agentsDataArray.Length; i++)
+            for (int i = 0; i < otherAgents.Length; i++)
             {
-                if (entity != entityArray[i])
+                if (!Equals(otherAgents[i].position, translation.Value))
                 {
-                    float3 otherAgentPos = translationArray[i].Value;
-                    if (math.length(otherAgentPos - translation.Value) < settings.neighborRadius)
+                    float3 otherAgentPos = otherAgents[i].position;
+                    float3 separation = translation.Value - otherAgentPos;
+                    if (math.length(separation) < settings.neighborRadius)
                     {
-                        separationVector += translation.Value - otherAgentPos;
+                        separationVector += separation;
                         averagePosition += otherAgentPos;
-                        averageVelocity += agentsDataArray[i].velocity;
+                        averageVelocity += otherAgents[i].velocity;
 
                         ++neighborCount;
                     }
@@ -105,6 +80,15 @@ namespace Spartans.Steering
             cohesionDirection = math.normalizesafe(averagePosition);
             averageVelocity /= neighborCount;
             alignmentDirection = math.normalizesafe(averageVelocity);
+
+            return separationDirection * settings.separationWeight + cohesionDirection * settings.cohesionWeight + alignmentDirection * settings.alignmentWeight;
+        }
+
+        public static float3 QuadrantFlock(int neighbours, in AgentData agent, float3 massCenter, float3 alignment, in AgentSettings settings)
+        {
+            float3 separationDirection = float3.zero; // math.normalizesafe(massCenter / neighbours);
+            float3 cohesionDirection = math.normalizesafe(massCenter / neighbours);
+            float3 alignmentDirection = math.normalizesafe(alignment / neighbours);
 
             return separationDirection * settings.separationWeight + cohesionDirection * settings.cohesionWeight + alignmentDirection * settings.alignmentWeight;
         }

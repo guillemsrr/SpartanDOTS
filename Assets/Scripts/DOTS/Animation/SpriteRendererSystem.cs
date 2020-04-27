@@ -8,7 +8,7 @@ using Unity.Transforms;
 using Unity.Collections;
 using Unity.Mathematics;
 
-namespace Spartans
+namespace Spartans.Animation
 {
     [DisableAutoCreation]
     //[UpdateAfter(typeof(SpriteAnimationSystem))]

@@ -53,6 +53,7 @@ namespace Spartans
                     cohesionWeight = 1.6f,
                     alignmentWeight = 1f,
                     neighborRadius = 0.85f,
+                    CellRadius = 2f
                 });
             });
         }

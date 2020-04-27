@@ -1,23 +1,20 @@
 ﻿using Unity.Entities;
-using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
+using Spartans.Quadrant;
 
 namespace Spartans
 {
     [DisableAutoCreation]
     public class SpawnerSystem : ComponentSystem
     {
-        EntityQuery _mainGroup;
         float _numSpartanEntities;
         float _numEnemyEntities = 10;
 
         public float NumEntities { set { _numSpartanEntities = value; } }
         protected override void OnCreate()
         {
-            _mainGroup = GetEntityQuery(
-                ComponentType.ReadOnly<SpartanSpawn>(),
-                ComponentType.ReadOnly<Translation>());
+            
         }
 
         protected override void OnUpdate()
@@ -27,14 +24,15 @@ namespace Spartans
             {
                 for (int i = 0; i< _numSpartanEntities; i++)
                 {
-                    var newEntity = PostUpdateCommands.Instantiate(spartanSpawn.Prefab);
+                    var spartanEntity = PostUpdateCommands.Instantiate(spartanSpawn.Prefab);
                     Vector3 pos = new Vector3(UnityEngine.Random.Range(-5f, 5f), 0f, UnityEngine.Random.Range(-5f, 5f) - 10f);
-                    PostUpdateCommands.SetComponent(newEntity, new Translation { Value = pos });
-                    PostUpdateCommands.AddComponent(newEntity, new Rotation { Value = Quaternion.identity });
-                    PostUpdateCommands.AddComponent(newEntity, new SpartanData { });
-                    PostUpdateCommands.AddComponent(newEntity, new SpartanTag { });
-                    PostUpdateCommands.AddComponent(newEntity, new AgentData
+                    PostUpdateCommands.SetComponent(spartanEntity, new Translation { Value = pos });
+                    PostUpdateCommands.AddComponent(spartanEntity, new Rotation { Value = Quaternion.identity });
+                    PostUpdateCommands.AddComponent(spartanEntity, new SpartanData { });
+                    PostUpdateCommands.AddComponent(spartanEntity, new SpartanTag { });
+                    PostUpdateCommands.AddComponent(spartanEntity, new AgentData
                     {
+                        position = pos,
                         targetPosition = pos,
                         moveWeight = 1.5f,
                         seekWeight = 2f,
@@ -43,6 +41,7 @@ namespace Spartans
                         flockWeight = 1f,
                         orientationSmooth = 0.5f
                     });
+                    PostUpdateCommands.AddComponent(spartanEntity, new QuadrantTag { });
                 }
             });
 
@@ -51,13 +50,14 @@ namespace Spartans
             {
                 for (int i = 0; i < _numEnemyEntities; i++)
                 {
-                    var newEntity = PostUpdateCommands.Instantiate(enemySpawn.Prefab);
+                    var enemyEntity = PostUpdateCommands.Instantiate(enemySpawn.Prefab);
                     Vector3 pos = new Vector3(UnityEngine.Random.Range(-5f, 5f), 0f, UnityEngine.Random.Range(-5f, 5f) + 10f);
-                    PostUpdateCommands.SetComponent(newEntity, new Translation { Value = pos });
-                    PostUpdateCommands.AddComponent(newEntity, new Rotation { Value = Quaternion.identity });
-                    PostUpdateCommands.AddComponent(newEntity, new EnemyTag {});
-                    PostUpdateCommands.AddComponent(newEntity, new AgentData
+                    PostUpdateCommands.SetComponent(enemyEntity, new Translation { Value = pos });
+                    PostUpdateCommands.AddComponent(enemyEntity, new Rotation { Value = Quaternion.identity });
+                    PostUpdateCommands.AddComponent(enemyEntity, new EnemyTag {});
+                    PostUpdateCommands.AddComponent(enemyEntity, new AgentData
                     {
+                        position = pos,
                         targetPosition = pos,
                         moveWeight = 1.5f,
                         seekWeight = 2f,
@@ -66,6 +66,7 @@ namespace Spartans
                         flockWeight = 1f,
                         orientationSmooth = 0.5f
                     });
+                    PostUpdateCommands.AddComponent(enemyEntity, new QuadrantTag { });
                 }
             });
         }

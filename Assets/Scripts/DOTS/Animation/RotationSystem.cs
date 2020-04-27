@@ -5,7 +5,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Transforms;
 
-namespace Spartans
+namespace Spartans.Animation
 {
     [DisableAutoCreation]
     public class RotationSystem : JobComponentSystem

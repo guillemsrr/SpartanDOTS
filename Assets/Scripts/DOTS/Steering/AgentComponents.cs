@@ -10,6 +10,7 @@ namespace Spartans
     public struct AgentData : IComponentData
     {
         //steering
+        public float3 position;
         public float3 direction;
         public float3 velocity;
         public float3 targetPosition;
@@ -45,6 +46,8 @@ namespace Spartans
         public float alignmentWeight;
         [DefaultValue(1f)]
         public float neighborRadius;
+        [DefaultValue(2f)]
+        public float CellRadius;
     }
 
     #endregion

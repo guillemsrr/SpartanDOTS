@@ -6,7 +6,7 @@ using Unity.Jobs;
 using Unity.Transforms;
 using Unity.Mathematics;
 
-namespace Spartans
+namespace Spartans.Animation
 {
 	[DisableAutoCreation]
 	//[AlwaysSynchronizeSystem]

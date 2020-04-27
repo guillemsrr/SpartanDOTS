@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 using Unity.Mathematics;
 using Unity.Jobs;
 
-namespace Spartans
+namespace Spartans.Input
 {
 	/// <summary>
 	/// Detects the player input and communicates it to the entities
