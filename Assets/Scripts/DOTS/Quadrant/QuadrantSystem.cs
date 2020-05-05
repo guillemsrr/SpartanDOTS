@@ -7,13 +7,18 @@ using Spartans.Obstacle;
 
 namespace Spartans.Quadrant
 {
+    [AlwaysSynchronizeSystem]
     public class QuadrantSystem : SystemBase
     {
         private const int _yMultiplier = 1000;
         private const int _cellSize = 5;
-        public static NativeHashMap<int, QuadrantAgentData> spartanQuadrantHashMap;
-        public static NativeHashMap<int, QuadrantAgentData> enemyQuadrantHashMap;
-        public static NativeHashMap<int, QuadrantObstacleData> obstacleQuadrantHashMap;
+        public static NativeMultiHashMap<int, AgentData> spartanQuadrantMultiHashMap;
+        public static NativeMultiHashMap<int, AgentData> enemyQuadrantMultiHashMap;
+        public static NativeMultiHashMap<int, ObstacleData> obstacleQuadrantMultiHashMap;
+        public static NativeHashMap<int, float3> spartanMassCenterQuadrantHashMap;
+        public static NativeHashMap<int, float3> spartanAlignmentQuadrantHashMap;
+        public static NativeHashMap<int, float3> enemyMassCenterQuadrantHashMap;
+        public static NativeHashMap<int, float3> enemyAlignmentQuadrantHashMap;
 
         EntityQuery _spartanQuery;
         EntityQuery _enemyQuery;
@@ -26,9 +31,13 @@ namespace Spartans.Quadrant
             _enemyQuery     = GetEntityQuery(typeof(EnemyTag));
             _obstacleQuery  = GetEntityQuery(typeof(ObstacleData));
 
-            spartanQuadrantHashMap  = new NativeHashMap<int, QuadrantAgentData>(0, Allocator.Persistent);
-            enemyQuadrantHashMap    = new NativeHashMap<int, QuadrantAgentData>(0, Allocator.Persistent);
-            obstacleQuadrantHashMap = new NativeHashMap<int, QuadrantObstacleData>(0, Allocator.Persistent);
+            spartanQuadrantMultiHashMap  = new NativeMultiHashMap<int, AgentData>(0, Allocator.Persistent);
+            enemyQuadrantMultiHashMap    = new NativeMultiHashMap<int, AgentData>(0, Allocator.Persistent);
+            obstacleQuadrantMultiHashMap = new NativeMultiHashMap<int, ObstacleData>(0, Allocator.Persistent);
+            spartanMassCenterQuadrantHashMap = new NativeHashMap<int, float3>(0, Allocator.Persistent);
+            spartanAlignmentQuadrantHashMap = new NativeHashMap<int, float3>(0, Allocator.Persistent);
+            enemyMassCenterQuadrantHashMap = new NativeHashMap<int, float3>(0, Allocator.Persistent);
+            enemyAlignmentQuadrantHashMap = new NativeHashMap<int, float3>(0, Allocator.Persistent);
 
             RequireForUpdate(_spartanQuery);
             RequireForUpdate(_enemyQuery);
@@ -39,111 +48,110 @@ namespace Spartans.Quadrant
 
         protected override void OnDestroy()
         {
-            spartanQuadrantHashMap.Dispose();
-            enemyQuadrantHashMap.Dispose();
-            obstacleQuadrantHashMap.Dispose();
+            spartanQuadrantMultiHashMap.Dispose();
+            enemyQuadrantMultiHashMap.Dispose();
+            obstacleQuadrantMultiHashMap.Dispose();
+            spartanMassCenterQuadrantHashMap.Dispose();
+            spartanAlignmentQuadrantHashMap.Dispose();
+            enemyMassCenterQuadrantHashMap.Dispose();
+            enemyAlignmentQuadrantHashMap.Dispose();
 
             base.OnDestroy();
         }
 
         protected override void OnUpdate()
         {
-            spartanQuadrantHashMap.Clear();
-            enemyQuadrantHashMap.Clear();
-            obstacleQuadrantHashMap.Clear();
+            spartanQuadrantMultiHashMap.Clear();
+            enemyQuadrantMultiHashMap.Clear();
+            obstacleQuadrantMultiHashMap.Clear();
 
             int queryLength = _spartanQuery.CalculateEntityCount();
-            if (queryLength > spartanQuadrantHashMap.Capacity)
+            if (queryLength == 0)
             {
-                spartanQuadrantHashMap.Capacity = queryLength;
+                return;
             }
-            queryLength = _enemyQuery.CalculateEntityCount();
-            if (queryLength > enemyQuadrantHashMap.Capacity)
+            if (queryLength > spartanQuadrantMultiHashMap.Capacity)
             {
-                enemyQuadrantHashMap.Capacity = queryLength;
+                spartanQuadrantMultiHashMap.Capacity = queryLength;
             }
-            queryLength = _obstacleQuery.CalculateEntityCount();
-            if (queryLength > obstacleQuadrantHashMap.Capacity)
-            {
-                obstacleQuadrantHashMap.Capacity = queryLength;
-            }
-
+            
             var spartansQuadrantJobHandle = Entities
                     .WithName("SpartansQuadrantJob")
                     .WithAll<SpartanTag>()
                     .ForEach((ref QuadrantTag quadrantTag, in AgentData agent) =>
                     {
-                        QuadrantAgentData quadrantData;
                         int hashMapKey = GetPositionHashMapKey(agent.position);
                         quadrantTag.numQuadrant = hashMapKey;
 
-                        if (!spartanQuadrantHashMap.TryGetValue(hashMapKey, out quadrantData))
-                        {
-                            spartanQuadrantHashMap.Add(hashMapKey, new QuadrantAgentData
-                            {
-                                numAgents = 0,
-                                //agentsData = new NativeList<AgentData>(),
-                                quadrantMassCenter = float3.zero,
-                                quadrantAlignment = float3.zero
-                            });
-                        }
+                        spartanQuadrantMultiHashMap.Add(hashMapKey, agent);
 
-                        //spartanQuadrantHashMap[hashMapKey].agentsData.Add(agent);
-                        //spartanQuadrantHashMap[hashMapKey].AddMassCenter(agent.position);
-                        //spartanQuadrantHashMap[hashMapKey].AddAlignment(agent.velocity);
+                        if (!spartanMassCenterQuadrantHashMap.ContainsKey(hashMapKey))
+                            spartanMassCenterQuadrantHashMap.Add(hashMapKey, agent.position);
+                        else
+                            spartanMassCenterQuadrantHashMap[hashMapKey] += agent.position;
+
+                        if (!spartanAlignmentQuadrantHashMap.ContainsKey(hashMapKey))
+                            spartanAlignmentQuadrantHashMap.Add(hashMapKey, agent.position);
+                        else
+                            spartanAlignmentQuadrantHashMap[hashMapKey] += agent.position;
                     })
+                    .WithoutBurst()
                     .ScheduleParallel(Dependency);
 
             Dependency = spartansQuadrantJobHandle;
+
+            queryLength = _enemyQuery.CalculateEntityCount();
+            if (queryLength == 0)
+                return;
+            if (queryLength > enemyQuadrantMultiHashMap.Capacity)
+            {
+                enemyQuadrantMultiHashMap.Capacity = queryLength;
+            }
 
             var enemyQuadrantJobHandle = Entities
                     .WithName("EnemyQuadrantJob")
                     .WithAll<EnemyTag>()
                     .ForEach((ref QuadrantTag quadrantTag, in AgentData agent) =>
                     {
-                        QuadrantAgentData quadrantData;
                         int hashMapKey = GetPositionHashMapKey(agent.position);
                         quadrantTag.numQuadrant = hashMapKey;
 
-                        if (!enemyQuadrantHashMap.TryGetValue(hashMapKey, out quadrantData))
-                        {
-                            enemyQuadrantHashMap.Add(hashMapKey, new QuadrantAgentData
-                            {
-                                numAgents = 0,
-                                //agentsData = new NativeList<AgentData>(),
-                                quadrantMassCenter = float3.zero,
-                                quadrantAlignment = float3.zero
-                            });
-                        }
+                        enemyQuadrantMultiHashMap.Add(hashMapKey, agent);
 
-                        //enemyQuadrantHashMap[hashMapKey].agentsData.Add(agent);
-                        //enemyQuadrantHashMap[hashMapKey].AddMassCenter(agent.position);
-                        //enemyQuadrantHashMap[hashMapKey].AddAlignment(agent.velocity);
+                        if (!enemyMassCenterQuadrantHashMap.ContainsKey(hashMapKey))
+                            enemyMassCenterQuadrantHashMap.Add(hashMapKey, agent.position);
+                        else
+                            enemyMassCenterQuadrantHashMap[hashMapKey] += agent.position;
+
+                        if (!enemyAlignmentQuadrantHashMap.ContainsKey(hashMapKey))
+                            enemyAlignmentQuadrantHashMap.Add(hashMapKey, agent.position);
+                        else
+                            enemyAlignmentQuadrantHashMap[hashMapKey] += agent.position;
 
                     })
+                    .WithoutBurst()
                     .ScheduleParallel(Dependency);
 
             Dependency = enemyQuadrantJobHandle;
+
+            queryLength = _obstacleQuery.CalculateEntityCount();
+            if (queryLength == 0)
+                return;
+            if (queryLength > obstacleQuadrantMultiHashMap.Capacity)
+            {
+                obstacleQuadrantMultiHashMap.Capacity = queryLength;
+            }
 
             var obstacleQuadrantJobHandle = Entities
                     .WithName("ObstacleQuadrantJob")
                     .ForEach((ref QuadrantTag quadrantTag, in ObstacleData obstacle) =>
                     {
-                        QuadrantObstacleData quadrantData;
                         int hashMapKey = GetPositionHashMapKey(obstacle.position);
                         quadrantTag.numQuadrant = hashMapKey;
 
-                        if (!obstacleQuadrantHashMap.TryGetValue(hashMapKey, out quadrantData))
-                        {
-                            obstacleQuadrantHashMap.Add(hashMapKey, new QuadrantObstacleData
-                            {
-                                numObstacles = 0,
-                                //obstaclesData = new NativeList<ObstacleData>()
-                            });
-                        }
-
-                        //obstacleQuadrantHashMap[hashMapKey].obstaclesData.Add(obstacle);
+                        obstacleQuadrantMultiHashMap.Add(hashMapKey, obstacle);
                     })
+                    .WithoutBurst()
                     .ScheduleParallel(Dependency);
 
             Dependency = obstacleQuadrantJobHandle;

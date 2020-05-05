@@ -9,7 +9,7 @@ namespace Spartans
     public class SpawnerSystem : ComponentSystem
     {
         float _numSpartanEntities;
-        float _numEnemyEntities = 10;
+        float _numEnemyEntities = 0;
 
         public float NumEntities { set { _numSpartanEntities = value; } }
         protected override void OnCreate()

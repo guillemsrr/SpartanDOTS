@@ -22,7 +22,7 @@ namespace Spartans.Steering
             return (desiredVelocity - agent.velocity);
         }
 
-        public static float3 Flee(in AgentData agent, in NativeArray<AgentData> otherAgents, in AgentSettings settings)
+        public static float3 Flee(in AgentData agent, in NativeList<AgentData> otherAgents, in AgentSettings settings)
         {
             float3 fleeingForce = 0;
             for (int i = 0; i < otherAgents.Length; i++)
@@ -44,7 +44,7 @@ namespace Spartans.Steering
             return fleeingForce;
         }
 
-        public static float3 Flock(in Translation translation, in NativeArray<AgentData> otherAgents, in AgentSettings settings)
+        public static float3 Flock(in AgentData agent, in NativeArray<AgentData> otherAgents, in AgentSettings settings)
         {
             int neighborCount = 0;
 
@@ -58,10 +58,10 @@ namespace Spartans.Steering
 
             for (int i = 0; i < otherAgents.Length; i++)
             {
-                if (!Equals(otherAgents[i].position, translation.Value))
+                if (!Equals(otherAgents[i], agent))
                 {
                     float3 otherAgentPos = otherAgents[i].position;
-                    float3 separation = translation.Value - otherAgentPos;
+                    float3 separation = agent.position - otherAgentPos;
                     if (math.length(separation) < settings.neighborRadius)
                     {
                         separationVector += separation;
@@ -76,7 +76,7 @@ namespace Spartans.Steering
             separationVector /= neighborCount;
             separationDirection = math.normalizesafe(separationVector);
             averagePosition /= neighborCount;
-            averagePosition -= translation.Value;
+            averagePosition -= agent.position;
             cohesionDirection = math.normalizesafe(averagePosition);
             averageVelocity /= neighborCount;
             alignmentDirection = math.normalizesafe(averageVelocity);

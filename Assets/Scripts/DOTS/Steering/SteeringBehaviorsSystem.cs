@@ -8,6 +8,8 @@ using Spartans.Quadrant;
 
 namespace Spartans.Steering
 {
+    [UpdateAfter(typeof(QuadrantSystem))]
+    [AlwaysSynchronizeSystem]
     public class SteeringBehaviorsSystem : SystemBase
     {
         List<AgentSettings> _settings = new List<AgentSettings>();
@@ -54,7 +56,7 @@ namespace Spartans.Steering
             JobHandle spartanSteeringJobHandle = Entities
                 .WithName("Spartan_Steering_Behavior")
                 .WithAll<SpartanTag>()
-                .ForEach((int entityInQueryIndex, ref AgentData agent, in QuadrantTag quadrantTag) =>
+                .ForEach((int entityInQueryIndex, ref AgentData agent, ref Translation translation, ref Rotation rotation, in QuadrantTag quadrantTag) =>
                 {
                     float3 frictionForce = math.normalizesafe(-agent.velocity) * settings.maxForce / 2f;
                     float3 movingForce = agent.direction * settings.maxForce;
@@ -62,54 +64,19 @@ namespace Spartans.Steering
                     float3 fleeingForce = float3.zero;
                     float3 flockingForce = float3.zero;
 
-                    //var otherSpartans = QuadrantSystem.spartanQuadrantHashMap[quadrantTag.numQuadrant].agentsData;
-                    //var otherEnemies = QuadrantSystem.enemyQuadrantHashMap[quadrantTag.numQuadrant].agentsData;
-                    //var neighbours = QuadrantSystem.spartanQuadrantHashMap[quadrantTag.numQuadrant].numAgents;
-                    //var alignment = QuadrantSystem.spartanQuadrantHashMap[quadrantTag.numQuadrant].quadrantAlignment;
-                    //var massCenter = QuadrantSystem.spartanQuadrantHashMap[quadrantTag.numQuadrant].quadrantMassCenter;
+                    int neighbours;
+                    var otherSpartans = GetAgentDatas(quadrantTag.numQuadrant, in QuadrantSystem.spartanQuadrantMultiHashMap, out neighbours);
+                    var otherEnemies = GetAgentDatas(quadrantTag.numQuadrant, QuadrantSystem.enemyQuadrantMultiHashMap, out neighbours);
+                    //var massCenter = QuadrantSystem.spartanMassCenterQuadrantHashMap[quadrantTag.numQuadrant];
+                    //var alignment = QuadrantSystem.spartanAlignmentQuadrantHashMap[quadrantTag.numQuadrant];
 
-                    //fleeingForce = SteeringPhysics.Flee( in agent, in otherSpartans, in settings);
-                    //fleeingForce += SteeringPhysics.Flee(in agent, in otherEnemies, in settings) * agent.enemyFleeRelation;
+                    fleeingForce = SteeringPhysics.Flee(in agent, in otherSpartans, in settings);
+                    fleeingForce += SteeringPhysics.Flee(in agent, in otherEnemies, in settings) * agent.enemyFleeRelation;
                     //flockingForce = SteeringPhysics.QuadrantFlock(neighbours, in agent, massCenter, alignment, settings);
+                    flockingForce = SteeringPhysics.Flock(in agent, otherSpartans, settings);
 
-                    agent.steeringForce = frictionForce + movingForce * agent.moveWeight + seekingForce * agent.seekWeight + fleeingForce * agent.fleeWeight + flockingForce * agent.flockWeight;
+                    agent.steeringForce = frictionForce + movingForce * agent.moveWeight + seekingForce * agent.seekWeight*0 + fleeingForce * agent.fleeWeight*0 + flockingForce * agent.flockWeight*0;
 
-                }).ScheduleParallel(Dependency);
-
-            Dependency = spartanSteeringJobHandle;
-
-            JobHandle enemySteeringJobHandle = Entities
-                .WithName("Enemy_Steering_Behavior")
-                .WithAll<EnemyTag>()
-                .ForEach((int entityInQueryIndex, ref AgentData agent, in QuadrantTag quadrantTag) =>
-                {
-                    float3 frictionForce = math.normalizesafe(-agent.velocity) * settings.maxForce / 2f;
-                    float3 movingForce = agent.direction * settings.maxForce;
-                    float3 seekingForce = SteeringPhysics.Seek(in agent, in settings);
-                    float3 fleeingForce = float3.zero;
-                    float3 flockingForce = float3.zero;
-
-                    //var otherSpartans = QuadrantSystem.spartanQuadrantHashMap[quadrantTag.numQuadrant].agentsData;
-                    //var otherEnemies = QuadrantSystem.enemyQuadrantHashMap[quadrantTag.numQuadrant].agentsData;
-                    //var neighbours = QuadrantSystem.spartanQuadrantHashMap[quadrantTag.numQuadrant].numAgents;
-                    //var alignment = QuadrantSystem.spartanQuadrantHashMap[quadrantTag.numQuadrant].quadrantAlignment;
-                    //var massCenter = QuadrantSystem.spartanQuadrantHashMap[quadrantTag.numQuadrant].quadrantMassCenter;
-
-                    //fleeingForce = SteeringPhysics.Flee(in agent, in otherSpartans, in settings)* agent.enemyFleeRelation;
-                    //fleeingForce += SteeringPhysics.Flee(in agent, in otherEnemies, in settings);
-                    //flockingForce = SteeringPhysics.QuadrantFlock(neighbours, in agent, massCenter, alignment, settings);
-
-                    agent.steeringForce = frictionForce + movingForce * agent.moveWeight + seekingForce * agent.seekWeight + fleeingForce * agent.fleeWeight + flockingForce * agent.flockWeight;
-
-                }).ScheduleParallel(Dependency);
-
-            Dependency = JobHandle.CombineDependencies(spartanSteeringJobHandle, enemySteeringJobHandle);
-
-
-            Dependency = Entities
-                .WithName("MRUA")
-                .ForEach((int entityInQueryIndex, ref Translation translation, ref Rotation rotation, ref AgentData agent) =>
-                {
                     float3 acceleration = agent.steeringForce / settings.mass;
 
                     agent.velocity += acceleration * deltaTime;
@@ -127,7 +94,65 @@ namespace Spartans.Steering
                     quaternion lookRotation = quaternion.LookRotationSafe(agent.velocity, new float3(0, 1, 0));
                     rotation.Value = math.slerp(rotation.Value, lookRotation, agent.orientationSmooth * deltaTime);
 
-                }).ScheduleParallel(Dependency);
+                })
+                .WithoutBurst()
+                .ScheduleParallel(Dependency);
+
+            Dependency = spartanSteeringJobHandle;
+
+            JobHandle enemySteeringJobHandle = Entities
+                .WithName("Enemy_Steering_Behavior")
+                .WithAll<EnemyTag>()
+                .ForEach((int entityInQueryIndex, ref AgentData agent, in QuadrantTag quadrantTag) =>
+                {
+                    float3 frictionForce = math.normalizesafe(-agent.velocity) * settings.maxForce / 2f;
+                    float3 movingForce = agent.direction * settings.maxForce;
+                    float3 seekingForce = SteeringPhysics.Seek(in agent, in settings);
+                    float3 fleeingForce = float3.zero;
+                    float3 flockingForce = float3.zero;
+
+                    int neighbours;
+                    var otherSpartans = GetAgentDatas(quadrantTag.numQuadrant, in QuadrantSystem.spartanQuadrantMultiHashMap, out neighbours);
+                    var otherEnemies = GetAgentDatas(quadrantTag.numQuadrant, QuadrantSystem.enemyQuadrantMultiHashMap, out neighbours);
+                    //var massCenter = QuadrantSystem.enemyMassCenterQuadrantHashMap[quadrantTag.numQuadrant];
+                    //var alignment = QuadrantSystem.enemyAlignmentQuadrantHashMap[quadrantTag.numQuadrant];
+
+                    fleeingForce = SteeringPhysics.Flee(in agent, in otherSpartans, in settings)* agent.enemyFleeRelation;
+                    fleeingForce += SteeringPhysics.Flee(in agent, in otherEnemies, in settings);
+                    //flockingForce = SteeringPhysics.QuadrantFlock(neighbours, in agent, massCenter, alignment, settings);
+                    flockingForce = SteeringPhysics.Flock(in agent, otherSpartans, settings);
+
+                    agent.steeringForce = frictionForce + movingForce * agent.moveWeight + seekingForce * agent.seekWeight + fleeingForce * agent.fleeWeight*0 + flockingForce * agent.flockWeight*0;
+
+                })
+                .WithoutBurst()
+                .ScheduleParallel(Dependency);
+
+            Dependency = JobHandle.CombineDependencies(spartanSteeringJobHandle, enemySteeringJobHandle);
+
+
+            //Dependency = Entities
+            //    .WithName("MRUA")
+            //    .ForEach((int entityInQueryIndex, ref Translation translation, ref Rotation rotation, ref AgentData agent) =>
+            //    {
+            //        float3 acceleration = agent.steeringForce / settings.mass;
+
+            //        agent.velocity += acceleration * deltaTime;
+            //        float speed = math.length(agent.velocity);
+            //        if (speed > settings.maxSpeed)
+            //        {
+            //            agent.velocity = math.normalizesafe(agent.velocity);
+            //            agent.velocity *= settings.maxSpeed;
+            //        }
+
+            //        agent.velocity.y = 0;
+            //        agent.position = agent.velocity * deltaTime;
+
+            //        translation.Value = agent.position;
+            //        quaternion lookRotation = quaternion.LookRotationSafe(agent.velocity, new float3(0, 1, 0));
+            //        rotation.Value = math.slerp(rotation.Value, lookRotation, agent.orientationSmooth * deltaTime);
+
+            //    }).ScheduleParallel(Dependency);
 
             #endregion
 
@@ -136,6 +161,25 @@ namespace Spartans.Steering
         protected override void OnDestroy()
         {
             base.OnDestroy();
+        }
+
+        private static NativeList<AgentData> GetAgentDatas(int hashMapKey, in NativeMultiHashMap<int, AgentData> agents, out int numAgents)
+        {
+            numAgents = 0;
+            NativeList<AgentData> agentsList = new NativeList<AgentData>(0, Allocator.Temp);
+            AgentData agent;
+            NativeMultiHashMapIterator<int> nativeMultiHashMapIterator;
+            if(agents.TryGetFirstValue(hashMapKey, out agent, out nativeMultiHashMapIterator))
+            {
+                do
+                {
+                    numAgents++;
+                    agentsList.Add(agent);
+                }
+                while (agents.TryGetNextValue(out agent, ref nativeMultiHashMapIterator));
+            }
+
+            return agentsList;
         }
 
 
