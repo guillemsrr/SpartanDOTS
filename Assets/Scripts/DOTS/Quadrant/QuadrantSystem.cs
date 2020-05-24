@@ -8,8 +8,8 @@ using UnityEngine;
 
 namespace Spartans.Quadrant
 {
-    //[DisableAutoCreation]
-    [AlwaysUpdateSystem]
+    [DisableAutoCreation]
+    //[AlwaysUpdateSystem]
     public class QuadrantSystem : SystemBase
     {
         private const int _yMultiplier = 1000;
