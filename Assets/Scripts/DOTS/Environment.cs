@@ -8,7 +8,7 @@ public static class Environment
 
     public static float TimeSpeed { get => _timeSpeed; set { _timeSpeed = value; } }
 
-    private static int _numberColumns = 5;
+    private static int _numberColumns = 10;
 
     public static int NumberColumns { get => _numberColumns; set { _numberColumns = value; } }
 }
