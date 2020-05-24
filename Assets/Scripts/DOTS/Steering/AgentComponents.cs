@@ -17,6 +17,7 @@ namespace Spartans
         public float3 steeringForce;
 
         //weights:
+        public float frictionWeight;
         public float moveWeight;
         public float seekWeight;
         public float fleeWeight;
@@ -46,8 +47,6 @@ namespace Spartans
         public float alignmentWeight;
         [DefaultValue(1f)]
         public float neighborRadius;
-        [DefaultValue(2f)]
-        public float CellRadius;
     }
 
     #endregion

@@ -1,6 +1,7 @@
 ﻿using Unity.Entities;
 using UnityEngine;
 using UnityEngine.UI;
+using Spartans.Quadrant;
 
 namespace Spartans
 {
@@ -27,16 +28,14 @@ namespace Spartans
 
             _columnsSlider.onValueChanged.AddListener(SetColumnsNumber);
 
-            if (_spawnerSystem == null)
-            {
-                _spawnerSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<SpawnerSystem>();
-            }
+            _spawnerSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<SpawnerSystem>();
         }
 
         private void Start()
         {
-            _spawnerSystem.NumEntities = _spawnSlider.value;
+            //_spawnerSystem.NumEntities = _spawnSlider.value;
             SpawnSpartans();
+            World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<QuadrantSystem>();
         }
 
         private void SpawnSpartans()

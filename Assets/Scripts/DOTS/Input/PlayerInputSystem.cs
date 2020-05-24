@@ -51,13 +51,15 @@ namespace Spartans.Input
 		/// <param name="context">Passed context using delegate</param>
 		private void OnMove(InputAction.CallbackContext context)
 		{
+			if (!_camera) return;
+
 			float2 vector2 = new float2(context.ReadValue<Vector2>());
 			float3 moveInput = vector2.x * _camera.transform.right + vector2.y * Vector3.Scale(_camera.transform.forward, new Vector3(1, 0, 1)).normalized;
 			JobHandle job = Entities.WithAll<SpartanData>().ForEach((ref AgentData agent) =>
 			{
 				agent.direction = moveInput;
 				//TODO randomize the seek weight so that they walk differently
-				agent.seekWeight = 1f; // new Unity.Mathematics.Random(1).NextFloat(1f - 0.1f, 1f + 0.1f);
+				agent.seekWeight = 0f; // new Unity.Mathematics.Random(1).NextFloat(1f - 0.1f, 1f + 0.1f);
 			}).Schedule(Dependency);
 
 			job.Complete();

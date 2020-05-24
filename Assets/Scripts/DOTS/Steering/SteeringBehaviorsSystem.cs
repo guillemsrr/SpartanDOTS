@@ -5,10 +5,11 @@ using Unity.Jobs;
 using Unity.Transforms;
 using Unity.Mathematics;
 using Spartans.Quadrant;
+using UnityEngine;
 
 namespace Spartans.Steering
 {
-    [UpdateAfter(typeof(QuadrantSystem))]
+    //[UpdateAfter(typeof(QuadrantSystem))]
     [AlwaysSynchronizeSystem]
     public class SteeringBehaviorsSystem : SystemBase
     {
@@ -58,7 +59,7 @@ namespace Spartans.Steering
                 .WithAll<SpartanTag>()
                 .ForEach((int entityInQueryIndex, ref AgentData agent, ref Translation translation, ref Rotation rotation, in QuadrantTag quadrantTag) =>
                 {
-                    float3 frictionForce = math.normalizesafe(-agent.velocity) * settings.maxForce / 2f;
+                    float3 frictionForce = math.normalizesafe(-agent.velocity);
                     float3 movingForce = agent.direction * settings.maxForce;
                     float3 seekingForce = SteeringPhysics.Seek(in agent, in settings);
                     float3 fleeingForce = float3.zero;
@@ -71,29 +72,13 @@ namespace Spartans.Steering
                     //var alignment = QuadrantSystem.spartanAlignmentQuadrantHashMap[quadrantTag.numQuadrant];
 
                     fleeingForce = SteeringPhysics.Flee(in agent, in otherSpartans, in settings);
-                    fleeingForce += SteeringPhysics.Flee(in agent, in otherEnemies, in settings) * agent.enemyFleeRelation;
+                    //fleeingForce += SteeringPhysics.Flee(in agent, in otherEnemies, in settings) * agent.enemyFleeRelation;
                     //flockingForce = SteeringPhysics.QuadrantFlock(neighbours, in agent, massCenter, alignment, settings);
                     flockingForce = SteeringPhysics.Flock(in agent, otherSpartans, settings);
 
-                    agent.steeringForce = frictionForce + movingForce * agent.moveWeight + seekingForce * agent.seekWeight*0 + fleeingForce * agent.fleeWeight*0 + flockingForce * agent.flockWeight*0;
+                    agent.steeringForce = frictionForce*agent.frictionWeight + movingForce * agent.moveWeight + seekingForce * agent.seekWeight + fleeingForce * agent.fleeWeight + flockingForce * agent.flockWeight;
 
-                    float3 acceleration = agent.steeringForce / settings.mass;
-
-                    agent.velocity += acceleration * deltaTime;
-                    float speed = math.length(agent.velocity);
-                    if (speed > settings.maxSpeed)
-                    {
-                        agent.velocity = math.normalizesafe(agent.velocity);
-                        agent.velocity *= settings.maxSpeed;
-                    }
-
-                    agent.velocity.y = 0;
-                    agent.position = agent.velocity * deltaTime;
-
-                    translation.Value = agent.position;
-                    quaternion lookRotation = quaternion.LookRotationSafe(agent.velocity, new float3(0, 1, 0));
-                    rotation.Value = math.slerp(rotation.Value, lookRotation, agent.orientationSmooth * deltaTime);
-
+                    //DebugPhysicsLines(agent.position, fleeingForce, flockingForce);
                 })
                 .WithoutBurst()
                 .ScheduleParallel(Dependency);
@@ -105,7 +90,7 @@ namespace Spartans.Steering
                 .WithAll<EnemyTag>()
                 .ForEach((int entityInQueryIndex, ref AgentData agent, in QuadrantTag quadrantTag) =>
                 {
-                    float3 frictionForce = math.normalizesafe(-agent.velocity) * settings.maxForce / 2f;
+                    float3 frictionForce = math.normalizesafe(-agent.velocity);
                     float3 movingForce = agent.direction * settings.maxForce;
                     float3 seekingForce = SteeringPhysics.Seek(in agent, in settings);
                     float3 fleeingForce = float3.zero;
@@ -113,17 +98,16 @@ namespace Spartans.Steering
 
                     int neighbours;
                     var otherSpartans = GetAgentDatas(quadrantTag.numQuadrant, in QuadrantSystem.spartanQuadrantMultiHashMap, out neighbours);
-                    var otherEnemies = GetAgentDatas(quadrantTag.numQuadrant, QuadrantSystem.enemyQuadrantMultiHashMap, out neighbours);
+                    //var otherEnemies = GetAgentDatas(quadrantTag.numQuadrant, QuadrantSystem.enemyQuadrantMultiHashMap, out neighbours);
                     //var massCenter = QuadrantSystem.enemyMassCenterQuadrantHashMap[quadrantTag.numQuadrant];
                     //var alignment = QuadrantSystem.enemyAlignmentQuadrantHashMap[quadrantTag.numQuadrant];
 
                     fleeingForce = SteeringPhysics.Flee(in agent, in otherSpartans, in settings)* agent.enemyFleeRelation;
-                    fleeingForce += SteeringPhysics.Flee(in agent, in otherEnemies, in settings);
+                    //fleeingForce += SteeringPhysics.Flee(in agent, in otherEnemies, in settings);
                     //flockingForce = SteeringPhysics.QuadrantFlock(neighbours, in agent, massCenter, alignment, settings);
                     flockingForce = SteeringPhysics.Flock(in agent, otherSpartans, settings);
 
-                    agent.steeringForce = frictionForce + movingForce * agent.moveWeight + seekingForce * agent.seekWeight + fleeingForce * agent.fleeWeight*0 + flockingForce * agent.flockWeight*0;
-
+                    agent.steeringForce = frictionForce*agent.frictionWeight + movingForce * agent.moveWeight + seekingForce * agent.seekWeight + fleeingForce * agent.fleeWeight + flockingForce * agent.flockWeight;
                 })
                 .WithoutBurst()
                 .ScheduleParallel(Dependency);
@@ -131,28 +115,28 @@ namespace Spartans.Steering
             Dependency = JobHandle.CombineDependencies(spartanSteeringJobHandle, enemySteeringJobHandle);
 
 
-            //Dependency = Entities
-            //    .WithName("MRUA")
-            //    .ForEach((int entityInQueryIndex, ref Translation translation, ref Rotation rotation, ref AgentData agent) =>
-            //    {
-            //        float3 acceleration = agent.steeringForce / settings.mass;
+            Dependency = Entities
+                .WithName("MRUA")
+                .ForEach((int entityInQueryIndex, ref Translation translation, ref Rotation rotation, ref AgentData agent) =>
+                {
+                    float3 acceleration = agent.steeringForce / settings.mass;
 
-            //        agent.velocity += acceleration * deltaTime;
-            //        float speed = math.length(agent.velocity);
-            //        if (speed > settings.maxSpeed)
-            //        {
-            //            agent.velocity = math.normalizesafe(agent.velocity);
-            //            agent.velocity *= settings.maxSpeed;
-            //        }
+                    agent.velocity += acceleration * deltaTime;
+                    float speed = math.length(agent.velocity);
+                    if (speed > settings.maxSpeed)
+                    {
+                        agent.velocity = math.normalizesafe(agent.velocity);
+                        agent.velocity *= settings.maxSpeed;
+                    }
 
-            //        agent.velocity.y = 0;
-            //        agent.position = agent.velocity * deltaTime;
+                    agent.velocity.y = 0;
+                    agent.position += agent.velocity * deltaTime;
 
-            //        translation.Value = agent.position;
-            //        quaternion lookRotation = quaternion.LookRotationSafe(agent.velocity, new float3(0, 1, 0));
-            //        rotation.Value = math.slerp(rotation.Value, lookRotation, agent.orientationSmooth * deltaTime);
+                    translation.Value = agent.position;
+                    quaternion lookRotation = quaternion.LookRotationSafe(agent.velocity, new float3(0, 1, 0));
+                    rotation.Value = math.slerp(rotation.Value, lookRotation, agent.orientationSmooth * deltaTime);
 
-            //    }).ScheduleParallel(Dependency);
+                }).ScheduleParallel(Dependency);
 
             #endregion
 
@@ -182,6 +166,32 @@ namespace Spartans.Steering
             return agentsList;
         }
 
+        private static void DebugStreamPhysicsLines(float3 position, float3 flee, float3 flock)
+        {
+            DebugStream.Line fleeForceLine = new DebugStream.Line()
+            {
+                X0 = position,
+                X1 = position + flee * 10,
+                Color = UnityEngine.Color.black,
+            };
+
+            fleeForceLine.Draw();
+
+            DebugStream.Line flockForceLine = new DebugStream.Line()
+            {
+                X0 = position,
+                X1 = position + flock * 10,
+                Color = UnityEngine.Color.red,
+            };
+
+            flockForceLine.Draw();
+        }
+
+        private static void DebugPhysicsLines(float3 position, float3 flee, float3 flock)
+        {
+            Debug.DrawLine(position, position + flee, Color.red);
+            Debug.DrawLine(position, position + flock, Color.black);
+        }
 
     }
 }
