@@ -8,7 +8,7 @@ namespace Spartans
     [DisableAutoCreation]
     public class SpawnerSystem : EntityCommandBufferSystem
     {
-        private float _numSpartanEntities = 500;
+        private float _numSpartanEntities = 100;
         private float _numEnemyEntities = 0;
         private float _maxSeparation = 10f;
 
@@ -38,9 +38,9 @@ namespace Spartans
                         frictionWeight = 1.75f / 2f, //half maxForce
                         moveWeight = 1.5f,
                         seekWeight = 2f,
-                        fleeWeight = 10f,
+                        fleeWeight = 0f,
+                        flockWeight = 0f,
                         enemyFleeRelation = 2f,
-                        flockWeight = 2f,
                         orientationSmooth = 0.5f
                     });
                     PostUpdateCommands.AddComponent(spartanEntity, new QuadrantTag { });

@@ -12,7 +12,7 @@ namespace OOP.Test
         [SerializeField] private GameObject _spartanPrefab;
         [SerializeField] private GameObject _pointPrefab;
         public List<AgentTest> _agentsList = new List<AgentTest>();
-        int _numSpartans = 50;
+        [SerializeField] private int _numSpartans = 10;
         QuadrantSystemTest _quadrantSystem;
         SteeringSystemTest _steeringSystem;
         FormationSystemTest _formationSystem;
@@ -77,12 +77,18 @@ namespace OOP.Test
 
         private void OnDrawGizmos()
         {
+            //DrawQuadrant();
+            DrawTargetPosition();
+        }
+
+        private void DrawQuadrant()
+        {
             if (_quadrantSystem == null) return;
 
             Gizmos.color = Color.black;
             Vector3 size = new Vector3(_quadrantSystem.CellSize, _quadrantSystem.CellSize, _quadrantSystem.CellSize);
             Vector3 center;
-            Vector3 initialCenter = center = new Vector3(-_quadrantSystem.CellSize * 5, 0, -_quadrantSystem.CellSize*5);
+            Vector3 initialCenter = center = new Vector3(-_quadrantSystem.CellSize * 5, 0, -_quadrantSystem.CellSize * 5);
             for (int i = 0; i < 10; i++)
             {
                 for (int j = 0; j < 10; j++)
@@ -94,6 +100,16 @@ namespace OOP.Test
                 center = new Vector3(center.x + _quadrantSystem.CellSize, 0, initialCenter.z);
             }
         }
+
+        private void DrawTargetPosition()
+        {
+            Gizmos.color = Color.red;
+            foreach (AgentTest agent in _agentsList)
+            {
+                Gizmos.DrawWireSphere(agent.targetPosition, 1f);
+            }
+        }
+
         private void HashKeyTest()
         {
             Vector3 center;

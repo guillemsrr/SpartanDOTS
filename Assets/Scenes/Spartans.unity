@@ -72,7 +72,7 @@ LightmapSettings:
     m_FinalGatherRayCount: 256
     m_ReflectionCompression: 2
     m_MixedBakeMode: 2
-    m_BakeBackend: 1
+    m_BakeBackend: 2
     m_PVRSampling: 1
     m_PVRDirectSampleCount: 32
     m_PVRSampleCount: 512
@@ -3532,7 +3532,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1103583735
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4598,6 +4598,7 @@ MonoBehaviour:
   _pointPrefab: {fileID: 5014709420671872479, guid: bb190a60ef863db46963691c323f6723,
     type: 3}
   _agentsList: []
+  _numSpartans: 50
   _camera: {fileID: 0}
 --- !u!4 &1635688099
 Transform:

@@ -59,7 +59,7 @@ namespace Spartans.Input
 			{
 				agent.direction = moveInput;
 				//TODO randomize the seek weight so that they walk differently
-				agent.seekWeight = 0f; // new Unity.Mathematics.Random(1).NextFloat(1f - 0.1f, 1f + 0.1f);
+				agent.seekWeight = 0.5f;// new Unity.Mathematics.Random(1).NextFloat(1f - 0.1f, 1f + 0.1f);
 			}).Schedule(Dependency);
 
 			job.Complete();

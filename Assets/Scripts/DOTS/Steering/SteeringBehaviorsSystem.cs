@@ -9,8 +9,8 @@ using UnityEngine;
 
 namespace Spartans.Steering
 {
-    //[UpdateAfter(typeof(QuadrantSystem))]
-    [AlwaysSynchronizeSystem]
+    [UpdateAfter(typeof(QuadrantSystem))]
+    //[AlwaysSynchronizeSystem]
     public class SteeringBehaviorsSystem : SystemBase
     {
         List<AgentSettings> _settings = new List<AgentSettings>();
@@ -67,6 +67,7 @@ namespace Spartans.Steering
 
                     int neighbours;
                     var otherSpartans = GetAgentDatas(quadrantTag.numQuadrant, in QuadrantSystem.spartanQuadrantMultiHashMap, out neighbours);
+                    //Debug.Log("neighbours " + neighbours);
                     var otherEnemies = GetAgentDatas(quadrantTag.numQuadrant, QuadrantSystem.enemyQuadrantMultiHashMap, out neighbours);
                     //var massCenter = QuadrantSystem.spartanMassCenterQuadrantHashMap[quadrantTag.numQuadrant];
                     //var alignment = QuadrantSystem.spartanAlignmentQuadrantHashMap[quadrantTag.numQuadrant];
@@ -79,6 +80,7 @@ namespace Spartans.Steering
                     agent.steeringForce = frictionForce*agent.frictionWeight + movingForce * agent.moveWeight + seekingForce * agent.seekWeight + fleeingForce * agent.fleeWeight + flockingForce * agent.flockWeight;
 
                     //DebugPhysicsLines(agent.position, fleeingForce, flockingForce);
+                    //DebugContextLines(agent.position, fleeingForce, flockingForce);
                 })
                 .WithoutBurst()
                 .ScheduleParallel(Dependency);
@@ -185,6 +187,31 @@ namespace Spartans.Steering
             };
 
             flockForceLine.Draw();
+        }
+
+        private static void DebugContextLines(float3 position, float3 flee, float3 flock)
+        {
+            DebugStream.Context context = new DebugStream.Context();
+            context.Line(position, position + flee * 10, Color.black);
+            context.Line(position, position + flock * 10, Color.red);
+
+            //DebugStream.Line fleeForceLine = new DebugStream.Line()
+            //{
+            //    X0 = position,
+            //    X1 = position + flee * 10,
+            //    Color = UnityEngine.Color.black,
+            //};
+
+            //fleeForceLine.Draw();
+
+            //DebugStream.Line flockForceLine = new DebugStream.Line()
+            //{
+            //    X0 = position,
+            //    X1 = position + flock * 10,
+            //    Color = UnityEngine.Color.red,
+            //};
+
+            //flockForceLine.Draw();
         }
 
         private static void DebugPhysicsLines(float3 position, float3 flee, float3 flock)

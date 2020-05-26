@@ -10,7 +10,7 @@ namespace Spartans.Quadrant
     public class QuadrantSystemController : MonoBehaviour
     {
         private QuadrantSystem _quadrantSystem;
-        private float _fixedDeltaTime = 2f;
+        private float _fixedDeltaTime = 0.1f;
 
         void Start()
         {

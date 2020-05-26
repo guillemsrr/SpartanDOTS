@@ -9,11 +9,10 @@ using UnityEngine;
 namespace Spartans.Quadrant
 {
     [DisableAutoCreation]
-    //[AlwaysUpdateSystem]
     public class QuadrantSystem : SystemBase
     {
         private const int _yMultiplier = 1000;
-        private const int _cellSize = 5;
+        private const int _cellSize = 10;
 
         private EntityQuery _spartanQuery;
         private EntityQuery _enemyQuery;
@@ -81,23 +80,26 @@ namespace Spartans.Quadrant
             if (queryLength > spartanQuadrantMultiHashMap.Capacity)
             {
                 spartanQuadrantMultiHashMap.Capacity = queryLength;
+                spartanMassCenterQuadrantHashMap.Capacity = queryLength;
+                spartanAlignmentQuadrantHashMap.Capacity = queryLength;
             }
 
             var spartanParallelWriter = spartanQuadrantMultiHashMap.AsParallelWriter();
             var enemyParallelWriter = enemyQuadrantMultiHashMap.AsParallelWriter();
             var obstacleParallelWriter = obstacleQuadrantMultiHashMap.AsParallelWriter();
 
-            //unused parallel writers :
-            /*
+            
             var spartanMassCenterParallelWriter = spartanMassCenterQuadrantHashMap.AsParallelWriter();
+            var spartanAlignmentParallelWriter = spartanAlignmentQuadrantHashMap.AsParallelWriter();
             var enemyMassCenterParallelWriter = enemyMassCenterQuadrantHashMap.AsParallelWriter();
             var enemyAlignmentParallelWriter = enemyAlignmentQuadrantHashMap.AsParallelWriter();
-            */
+            
 
-            Debug.Log("before fore each quadrant spartan");
-            var spartansQuadrantJobHandle = Entities
+            //var spartansQuadrantJobHandle = Entities
+                Entities
                     .WithName("SpartansQuadrantJob")
                     .WithAll<SpartanTag>()
+                    .WithStructuralChanges()
                     //.WithStoreEntityQueryInField(ref _spartanQuery)
                     .ForEach((ref QuadrantTag quadrantTag, in AgentData agent) =>
                     {
@@ -107,19 +109,18 @@ namespace Spartans.Quadrant
                         spartanParallelWriter.Add(hashMapKey, agent);
 
                         if (!spartanMassCenterQuadrantHashMap.ContainsKey(hashMapKey))
-                            spartanMassCenterQuadrantHashMap.Add(hashMapKey, agent.position);
+                            spartanMassCenterParallelWriter.TryAdd(hashMapKey, agent.position);
                         else
                             spartanMassCenterQuadrantHashMap[hashMapKey] += agent.position;
 
                         if (!spartanAlignmentQuadrantHashMap.ContainsKey(hashMapKey))
-                            spartanAlignmentQuadrantHashMap.Add(hashMapKey, agent.position);
+                            spartanAlignmentParallelWriter.TryAdd(hashMapKey, agent.position);
                         else
                             spartanAlignmentQuadrantHashMap[hashMapKey] += agent.position;
                     })
-                    .WithoutBurst()
-                    .ScheduleParallel(Dependency);
+                    .Run();
 
-            Dependency = spartansQuadrantJobHandle;
+            //Dependency = spartansQuadrantJobHandle;
 
             queryLength = _enemyQuery.CalculateEntityCount();
             if (queryLength == 0)

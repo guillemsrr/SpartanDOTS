@@ -33,8 +33,8 @@ namespace Spartans
 
         private void Start()
         {
-            //_spawnerSystem.NumEntities = _spawnSlider.value;
             SpawnSpartans();
+            _spawnerSystem.NumEntities = _spawnSlider.value;
             World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<QuadrantSystem>();
         }
 

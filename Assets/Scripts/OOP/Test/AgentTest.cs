@@ -34,11 +34,11 @@ namespace OOP.Test
             velocity = float3.zero;
             steeringForce = float3.zero;
             direction = float3.zero;
-            moveWeight = 0f;//1.5f
-            seekWeight = 0f;//2f;
-            fleeWeight = 0.9f;//0.9f
-            enemyFleeRelation = 2f;//2f;
-            flockWeight = 2f;//1f
+            moveWeight = 1.5f;
+            seekWeight = 2f;
+            fleeWeight = 0f;
+            flockWeight = 0f;
+            enemyFleeRelation = 2f;
             orientationSmooth = 0.5f;
             cell = 0;
         }
