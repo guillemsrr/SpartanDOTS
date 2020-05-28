@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d7fd9488000d3734a9e00ee676215985, type: 3}
   m_Name: PostProcessing Profile
   m_EditorClassIdentifier: 
-  components: []
+  components:
+  - {fileID: 4407501045903612724}
 --- !u!114 &4407501045903612724
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -25,14 +26,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66f335fb1ffd8684294ad653bf1c7564, type: 3}
   m_Name: ColorAdjustments
   m_EditorClassIdentifier: 
-  active: 1
+  active: 0
   m_AdvancedMode: 0
   postExposure:
-    m_OverrideState: 0
-    m_Value: 0
+    m_OverrideState: 1
+    m_Value: -3.64
   contrast:
-    m_OverrideState: 0
-    m_Value: 0
+    m_OverrideState: 1
+    m_Value: 55
     min: -100
     max: 100
   colorFilter:

@@ -5,6 +5,7 @@ using Unity.Transforms;
 using Unity.Mathematics;
 using Spartans.Obstacle;
 using UnityEngine;
+using Spartans.Enemies;
 
 namespace Spartans.Quadrant
 {

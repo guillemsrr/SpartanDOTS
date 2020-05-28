@@ -2,6 +2,8 @@
 using Unity.Transforms;
 using UnityEngine;
 using Spartans.Quadrant;
+using Spartans.Enemies;
+using Spartans.Attack;
 
 namespace Spartans
 {
@@ -44,6 +46,10 @@ namespace Spartans
                         orientationSmooth = 0.5f
                     });
                     PostUpdateCommands.AddComponent(spartanEntity, new QuadrantTag { });
+                    PostUpdateCommands.AddComponent(spartanEntity, new HealthComponent
+                    {
+                        health = 10,
+                    });
                 }
             });
 
@@ -69,6 +75,10 @@ namespace Spartans
                         orientationSmooth = 0.5f
                     });
                     PostUpdateCommands.AddComponent(enemyEntity, new QuadrantTag { });
+                    PostUpdateCommands.AddComponent(enemyEntity, new HealthComponent
+                    {
+                        health = 10,
+                    });
                 }
             });
         }

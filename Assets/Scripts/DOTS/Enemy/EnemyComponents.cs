@@ -4,7 +4,7 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using System.ComponentModel;
 
-namespace Spartans
+namespace Spartans.Enemies
 {
     public struct EnemyTag : IComponentData
     {

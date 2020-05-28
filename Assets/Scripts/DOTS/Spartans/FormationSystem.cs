@@ -8,16 +8,18 @@ using Unity.Transforms;
 using Unity.Mathematics;
 using Spartans.Quadrant;
 using UnityEditorInternal;
+using Spartans.Steering;
 
 namespace Spartans
 {
-    //[DisableAutoCreation]
     [AlwaysSynchronizeSystem]
+    [UpdateBefore(typeof(SteeringBehaviorsSystem))]
+    [UpdateAfter(typeof(QuadrantSystem))]
     public class FormationSystem : SystemBase
     {
         EntityQuery _query;
-        float _rowSeparation = 2f;
-        float _colSeparation = 2f;
+        float _rowSeparation = 1f;
+        float _colSeparation = 1f;
         AgentData _leaderAgentData;
         int _leaderEntityNum;
 
@@ -141,10 +143,6 @@ namespace Spartans
 
                     //set to array
                     targetPositions[numEntity] = targetPos;
-                    if (Equals(targetPositions[numEntity], float3.zero))
-                    {
-                        Debug.Log("FUCKED");
-                    }
                     formationPositions[numEntity] = new int2(i, j);
                 }
             }
@@ -176,10 +174,6 @@ namespace Spartans
 
                     //set to array
                     targetPositions[numEntity] = targetPos;
-                    if (Equals(targetPositions[numEntity], float3.zero))
-                    {
-                        Debug.Log("FUCKED");
-                    }
                     formationPositions[numEntity] = new int2(i, j);
                 }
             }

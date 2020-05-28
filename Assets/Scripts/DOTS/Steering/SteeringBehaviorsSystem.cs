@@ -6,6 +6,7 @@ using Unity.Transforms;
 using Unity.Mathematics;
 using Spartans.Quadrant;
 using UnityEngine;
+using Spartans.Enemies;
 
 namespace Spartans.Steering
 {
@@ -151,7 +152,7 @@ namespace Spartans.Steering
             base.OnDestroy();
         }
 
-        private static NativeList<AgentData> GetAgentDatas(int hashMapKey, in NativeMultiHashMap<int, AgentData> agents, out int numAgents)
+        public static NativeList<AgentData> GetAgentDatas(int hashMapKey, in NativeMultiHashMap<int, AgentData> agents, out int numAgents)
         {
             numAgents = 0;
             NativeList<AgentData> agentsList = new NativeList<AgentData>(0, Allocator.Temp);
