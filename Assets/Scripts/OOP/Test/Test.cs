@@ -42,11 +42,15 @@ namespace OOP.Test
                 newSpartan.AddComponent<AgentTest>();
                 AgentTest agent = newSpartan.GetComponent<AgentTest>();
                 agent.Init(newSpartan.transform.position);
+                agent.meshRenderer = newSpartan.transform.GetChild(0).GetComponent <MeshRenderer> ();
                 _agentsList.Add(agent);
             }
 
             //HashKeyTest();
             //_quadrantSystem.AllSpartansInOneCell(_agentsList);
+            _formationSystem._leaderAgent = _agentsList[0];
+            _formationSystem._numEntity = 0;
+            _formationSystem._leaderAgent.meshRenderer.material.color = Color.blue;
         }
 
         private void FixedUpdate()
@@ -64,6 +68,7 @@ namespace OOP.Test
             foreach(AgentTest agent in _agentsList)
             {
                 agent.direction = moveInput;
+                agent.moveWeight = Mathf.Lerp(agent.moveWeight, agent.moveWeight + UnityEngine.Random.Range(-0.2f, 0.2f), Time.deltaTime);
             }
         }
 

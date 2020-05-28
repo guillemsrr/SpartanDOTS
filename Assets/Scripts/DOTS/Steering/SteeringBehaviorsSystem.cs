@@ -67,20 +67,22 @@ namespace Spartans.Steering
 
                     int neighbours;
                     var otherSpartans = GetAgentDatas(quadrantTag.numQuadrant, in QuadrantSystem.spartanQuadrantMultiHashMap, out neighbours);
-                    //Debug.Log("neighbours " + neighbours);
                     var otherEnemies = GetAgentDatas(quadrantTag.numQuadrant, QuadrantSystem.enemyQuadrantMultiHashMap, out neighbours);
                     //var massCenter = QuadrantSystem.spartanMassCenterQuadrantHashMap[quadrantTag.numQuadrant];
                     //var alignment = QuadrantSystem.spartanAlignmentQuadrantHashMap[quadrantTag.numQuadrant];
 
                     fleeingForce = SteeringPhysics.Flee(in agent, in otherSpartans, in settings);
-                    //fleeingForce += SteeringPhysics.Flee(in agent, in otherEnemies, in settings) * agent.enemyFleeRelation;
+                    fleeingForce += SteeringPhysics.Flee(in agent, in otherEnemies, in settings) * agent.enemyFleeRelation;
                     //flockingForce = SteeringPhysics.QuadrantFlock(neighbours, in agent, massCenter, alignment, settings);
                     flockingForce = SteeringPhysics.Flock(in agent, otherSpartans, settings);
 
                     agent.steeringForce = frictionForce*agent.frictionWeight + movingForce * agent.moveWeight + seekingForce * agent.seekWeight + fleeingForce * agent.fleeWeight + flockingForce * agent.flockWeight;
 
-                    //DebugPhysicsLines(agent.position, fleeingForce, flockingForce);
-                    //DebugContextLines(agent.position, fleeingForce, flockingForce);
+                    Debug.DrawLine(agent.position, agent.position + frictionForce*agent.frictionWeight, Color.gray);
+                    Debug.DrawLine(agent.position, agent.position + movingForce*agent.moveWeight, Color.blue);
+                    Debug.DrawLine(agent.position, agent.position + seekingForce*agent.seekWeight, Color.green);
+                    Debug.DrawLine(agent.position, agent.position + fleeingForce*agent.fleeWeight, Color.red);
+                    Debug.DrawLine(agent.position, agent.position + flockingForce*agent.flockWeight, Color.cyan);
                 })
                 .WithoutBurst()
                 .ScheduleParallel(Dependency);
@@ -100,12 +102,12 @@ namespace Spartans.Steering
 
                     int neighbours;
                     var otherSpartans = GetAgentDatas(quadrantTag.numQuadrant, in QuadrantSystem.spartanQuadrantMultiHashMap, out neighbours);
-                    //var otherEnemies = GetAgentDatas(quadrantTag.numQuadrant, QuadrantSystem.enemyQuadrantMultiHashMap, out neighbours);
+                    var otherEnemies = GetAgentDatas(quadrantTag.numQuadrant, QuadrantSystem.enemyQuadrantMultiHashMap, out neighbours);
                     //var massCenter = QuadrantSystem.enemyMassCenterQuadrantHashMap[quadrantTag.numQuadrant];
                     //var alignment = QuadrantSystem.enemyAlignmentQuadrantHashMap[quadrantTag.numQuadrant];
 
                     fleeingForce = SteeringPhysics.Flee(in agent, in otherSpartans, in settings)* agent.enemyFleeRelation;
-                    //fleeingForce += SteeringPhysics.Flee(in agent, in otherEnemies, in settings);
+                    fleeingForce += SteeringPhysics.Flee(in agent, in otherEnemies, in settings);
                     //flockingForce = SteeringPhysics.QuadrantFlock(neighbours, in agent, massCenter, alignment, settings);
                     flockingForce = SteeringPhysics.Flock(in agent, otherSpartans, settings);
 
@@ -212,12 +214,6 @@ namespace Spartans.Steering
             //};
 
             //flockForceLine.Draw();
-        }
-
-        private static void DebugPhysicsLines(float3 position, float3 flee, float3 flock)
-        {
-            Debug.DrawLine(position, position + flee, Color.red);
-            Debug.DrawLine(position, position + flock, Color.black);
         }
 
     }

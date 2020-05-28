@@ -91,8 +91,6 @@ namespace Spartans.Quadrant
             
             var spartanMassCenterParallelWriter = spartanMassCenterQuadrantHashMap.AsParallelWriter();
             var spartanAlignmentParallelWriter = spartanAlignmentQuadrantHashMap.AsParallelWriter();
-            var enemyMassCenterParallelWriter = enemyMassCenterQuadrantHashMap.AsParallelWriter();
-            var enemyAlignmentParallelWriter = enemyAlignmentQuadrantHashMap.AsParallelWriter();
             
 
             //var spartansQuadrantJobHandle = Entities
@@ -114,9 +112,9 @@ namespace Spartans.Quadrant
                             spartanMassCenterQuadrantHashMap[hashMapKey] += agent.position;
 
                         if (!spartanAlignmentQuadrantHashMap.ContainsKey(hashMapKey))
-                            spartanAlignmentParallelWriter.TryAdd(hashMapKey, agent.position);
+                            spartanAlignmentParallelWriter.TryAdd(hashMapKey, agent.velocity);
                         else
-                            spartanAlignmentQuadrantHashMap[hashMapKey] += agent.position;
+                            spartanAlignmentQuadrantHashMap[hashMapKey] += agent.velocity;
                     })
                     .Run();
 
@@ -128,9 +126,14 @@ namespace Spartans.Quadrant
             if (queryLength > enemyQuadrantMultiHashMap.Capacity)
             {
                 enemyQuadrantMultiHashMap.Capacity = queryLength;
+                enemyMassCenterQuadrantHashMap.Capacity = queryLength;
+                enemyAlignmentQuadrantHashMap.Capacity = queryLength;
             }
 
-            var enemyQuadrantJobHandle = Entities
+            var enemyMassCenterParallelWriter = enemyMassCenterQuadrantHashMap.AsParallelWriter();
+            var enemyAlignmentParallelWriter = enemyAlignmentQuadrantHashMap.AsParallelWriter();
+
+            Entities
                     .WithName("EnemyQuadrantJob")
                     .WithAll<EnemyTag>()
                     //.WithStoreEntityQueryInField(ref _enemyQuery)
@@ -142,19 +145,19 @@ namespace Spartans.Quadrant
                         enemyParallelWriter.Add(hashMapKey, agent);
 
                         if (!enemyMassCenterQuadrantHashMap.ContainsKey(hashMapKey))
-                            enemyMassCenterQuadrantHashMap.Add(hashMapKey, agent.position);
+                            enemyMassCenterParallelWriter.TryAdd(hashMapKey, agent.position);
                         else
                             enemyMassCenterQuadrantHashMap[hashMapKey] += agent.position;
 
                         if (!enemyAlignmentQuadrantHashMap.ContainsKey(hashMapKey))
-                            enemyAlignmentQuadrantHashMap.Add(hashMapKey, agent.position);
+                            enemyAlignmentParallelWriter.TryAdd(hashMapKey, agent.position);
                         else
                             enemyAlignmentQuadrantHashMap[hashMapKey] += agent.position;
 
                     })
-                    .ScheduleParallel(Dependency);
+                    .Run();
 
-            Dependency = enemyQuadrantJobHandle;
+            //Dependency = enemyQuadrantJobHandle;
 
             queryLength = _obstacleQuery.CalculateEntityCount();
             if (queryLength == 0)

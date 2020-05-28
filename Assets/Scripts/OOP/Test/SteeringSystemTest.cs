@@ -14,7 +14,7 @@ namespace OOP.Test
         public const float separationWeight = 5f;
         public const float cohesionWeight = 1.6f;
         public const float alignmentWeight = 1f;
-        public const float neighborRadius = 2f;
+        public const float neighborRadius = 1f;
 
         public void UpdateSteering(List<AgentTest> agents)
         {

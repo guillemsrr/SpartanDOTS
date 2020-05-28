@@ -9,7 +9,7 @@ namespace Spartans
     public class SpawnerSystem : EntityCommandBufferSystem
     {
         private float _numSpartanEntities = 100;
-        private float _numEnemyEntities = 0;
+        private float _numEnemyEntities = 50;
         private float _maxSeparation = 10f;
 
         public float NumEntities { set { _numSpartanEntities = value; } }
@@ -21,7 +21,7 @@ namespace Spartans
         protected override void OnUpdate()
         {
             //SPARTANS
-            Entities.ForEach((Entity spawnerEntity, ref SpartanSpawn spartanSpawn, ref Translation translation) =>
+            Entities.ForEach((ref SpartanSpawn spartanSpawn) =>
             {
                 for (int i = 0; i< _numSpartanEntities; i++)
                 {
@@ -37,9 +37,9 @@ namespace Spartans
                         targetPosition = pos,
                         frictionWeight = 1.75f / 2f, //half maxForce
                         moveWeight = 1.5f,
-                        seekWeight = 2f,
-                        fleeWeight = 0f,
-                        flockWeight = 0f,
+                        seekWeight = 1f,
+                        fleeWeight = 0.5f,
+                        flockWeight = 0.5f,
                         enemyFleeRelation = 2f,
                         orientationSmooth = 0.5f
                     });
@@ -48,7 +48,7 @@ namespace Spartans
             });
 
             //ENEMIES
-            Entities.ForEach((Entity spawnerEntity, ref EnemySpawn enemySpawn, ref Translation translation) =>
+            Entities.ForEach((ref EnemySpawn enemySpawn) =>
             {
                 for (int i = 0; i < _numEnemyEntities; i++)
                 {
@@ -62,10 +62,10 @@ namespace Spartans
                         position = pos,
                         targetPosition = pos,
                         moveWeight = 1.5f,
-                        seekWeight = 2f,
-                        fleeWeight = 0.9f,
+                        seekWeight = 1f,
+                        fleeWeight = 0.5f,
                         enemyFleeRelation = 2f,
-                        flockWeight = 1f,
+                        flockWeight = 0.5f,
                         orientationSmooth = 0.5f
                     });
                     PostUpdateCommands.AddComponent(enemyEntity, new QuadrantTag { });

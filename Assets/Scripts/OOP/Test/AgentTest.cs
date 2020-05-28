@@ -27,6 +27,10 @@ namespace OOP.Test
         //quadrant:
         public int cell;
 
+        //formation
+        public bool isLeader;
+        public MeshRenderer meshRenderer;
+
         public void Init(float3 pos)
         {
             position = pos;
@@ -35,12 +39,13 @@ namespace OOP.Test
             steeringForce = float3.zero;
             direction = float3.zero;
             moveWeight = 1.5f;
-            seekWeight = 2f;
-            fleeWeight = 0f;
-            flockWeight = 0f;
+            seekWeight = 1f;
+            fleeWeight = 0.5f;
+            flockWeight = 0.5f;
             enemyFleeRelation = 2f;
             orientationSmooth = 0.5f;
             cell = 0;
+            isLeader = false;
         }
     }
 }
