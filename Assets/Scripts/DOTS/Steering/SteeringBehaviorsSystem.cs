@@ -10,7 +10,7 @@ using Spartans.Enemies;
 
 namespace Spartans.Steering
 {
-    [UpdateAfter(typeof(QuadrantSystem))]
+    //[UpdateAfter(typeof(QuadrantSystem))]
     //[AlwaysSynchronizeSystem]
     public class SteeringBehaviorsSystem : SystemBase
     {
@@ -170,53 +170,6 @@ namespace Spartans.Steering
 
             return agentsList;
         }
-
-        private static void DebugStreamPhysicsLines(float3 position, float3 flee, float3 flock)
-        {
-            DebugStream.Line fleeForceLine = new DebugStream.Line()
-            {
-                X0 = position,
-                X1 = position + flee * 10,
-                Color = UnityEngine.Color.black,
-            };
-
-            fleeForceLine.Draw();
-
-            DebugStream.Line flockForceLine = new DebugStream.Line()
-            {
-                X0 = position,
-                X1 = position + flock * 10,
-                Color = UnityEngine.Color.red,
-            };
-
-            flockForceLine.Draw();
-        }
-
-        private static void DebugContextLines(float3 position, float3 flee, float3 flock)
-        {
-            DebugStream.Context context = new DebugStream.Context();
-            context.Line(position, position + flee * 10, Color.black);
-            context.Line(position, position + flock * 10, Color.red);
-
-            //DebugStream.Line fleeForceLine = new DebugStream.Line()
-            //{
-            //    X0 = position,
-            //    X1 = position + flee * 10,
-            //    Color = UnityEngine.Color.black,
-            //};
-
-            //fleeForceLine.Draw();
-
-            //DebugStream.Line flockForceLine = new DebugStream.Line()
-            //{
-            //    X0 = position,
-            //    X1 = position + flock * 10,
-            //    Color = UnityEngine.Color.red,
-            //};
-
-            //flockForceLine.Draw();
-        }
-
     }
 }
 

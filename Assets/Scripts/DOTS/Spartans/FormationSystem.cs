@@ -14,7 +14,6 @@ namespace Spartans
 {
     [AlwaysSynchronizeSystem]
     [UpdateBefore(typeof(SteeringBehaviorsSystem))]
-    [UpdateAfter(typeof(QuadrantSystem))]
     public class FormationSystem : SystemBase
     {
         EntityQuery _query;

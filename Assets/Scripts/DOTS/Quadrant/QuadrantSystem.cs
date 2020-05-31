@@ -12,8 +12,8 @@ namespace Spartans.Quadrant
     [DisableAutoCreation]
     public class QuadrantSystem : SystemBase
     {
-        private const int _yMultiplier = 1000;
-        private const int _cellSize = 10;
+        private const int Y_MULTIPLIER = 1000;
+        private const int CELL_SIZE = 10;
 
         private EntityQuery _spartanQuery;
         private EntityQuery _enemyQuery;
@@ -27,7 +27,7 @@ namespace Spartans.Quadrant
         public static NativeHashMap<int, float3> enemyMassCenterQuadrantHashMap;
         public static NativeHashMap<int, float3> enemyAlignmentQuadrantHashMap;
 
-        public int CellSize => _cellSize;
+        public int CellSize => CELL_SIZE;
 
         protected override void OnCreate()
         {
@@ -118,6 +118,7 @@ namespace Spartans.Quadrant
                             spartanAlignmentQuadrantHashMap[hashMapKey] += agent.velocity;
                     })
                     .Run();
+                    //.Schedule(Dependency);
 
             //Dependency = spartansQuadrantJobHandle;
 
@@ -157,6 +158,7 @@ namespace Spartans.Quadrant
 
                     })
                     .Run();
+                    //.Schedule(Dependency);
 
             //Dependency = enemyQuadrantJobHandle;
 
@@ -195,7 +197,7 @@ namespace Spartans.Quadrant
         {
             int hash;
             //hash = (int)math.hash(new int3(math.floor(position / _cellSize)));
-            hash = (int)(math.floor(position.x / _cellSize) + (_yMultiplier * math.floor(position.z / _cellSize)));
+            hash = (int)(math.floor(position.x / CELL_SIZE) + (Y_MULTIPLIER * math.floor(position.z / CELL_SIZE)));
             return hash;
         }
 

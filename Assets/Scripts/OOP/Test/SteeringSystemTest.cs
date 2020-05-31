@@ -49,11 +49,11 @@ namespace OOP.Test
                 quaternion lookRotation = quaternion.LookRotationSafe(agent.velocity, new float3(0, 1, 0));
                 agent.transform.rotation = math.slerp(agent.transform.rotation, lookRotation, agent.orientationSmooth * Time.deltaTime);
 
-                Debug.DrawLine(agent.position, agent.position + frictionForce, Color.black);
-                Debug.DrawLine(agent.position, agent.position + movingForce * agent.moveWeight, Color.blue);
-                Debug.DrawLine(agent.position, agent.position + seekingForce * agent.seekWeight, Color.green);
-                Debug.DrawLine(agent.position, agent.position + fleeingForce * agent.fleeWeight, Color.red);
-                Debug.DrawLine(agent.position, agent.position + flockingForce * agent.flockWeight, Color.black);
+                //Debug.DrawLine(agent.position, agent.position + frictionForce, Color.black);
+                //Debug.DrawLine(agent.position, agent.position + movingForce * agent.moveWeight, Color.blue);
+                //Debug.DrawLine(agent.position, agent.position + seekingForce * agent.seekWeight, Color.green);
+                //Debug.DrawLine(agent.position, agent.position + fleeingForce * agent.fleeWeight, Color.red);
+                //Debug.DrawLine(agent.position, agent.position + flockingForce * agent.flockWeight, Color.black);
             }
         }
 

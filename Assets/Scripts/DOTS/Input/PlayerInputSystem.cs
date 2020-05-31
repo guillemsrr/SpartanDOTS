@@ -18,7 +18,6 @@ namespace Spartans.Input
 		/// </summary>
 		private PlayerInput _inputAction;
 
-		//Static otherwise i wouldn't be able to use it in a static separate function -> Clean code! But will it work in the future?
 		private static Camera _camera;
 
 		protected override void OnCreate()
