@@ -10,6 +10,7 @@ using Unity.Mathematics;
 
 namespace Spartans.Attack
 {
+    [UpdateAfter(typeof(EnemyTargetSystem))]
     public class CloseDamageAttackSystem : SystemBase
     {
         private const float MIN_DISTANCE = 1f;

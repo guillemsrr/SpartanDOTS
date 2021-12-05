@@ -8,7 +8,7 @@ using Spartans.Steering;
 
 namespace Spartans.Enemies
 {
-    [UpdateBefore(typeof(SteeringBehaviorsSystem))]
+    [UpdateAfter(typeof(SteeringBehaviorsSystem))]
     //[UpdateAfter(typeof(QuadrantSystem))]
     public class EnemyTargetSystem : SystemBase
     {

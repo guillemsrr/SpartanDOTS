@@ -10,7 +10,7 @@ using Spartans.Enemies;
 
 namespace Spartans.Steering
 {
-    //[UpdateAfter(typeof(QuadrantSystem))]
+    [UpdateAfter(typeof(FormationSystem))]
     //[AlwaysSynchronizeSystem]
     public class SteeringBehaviorsSystem : SystemBase
     {
